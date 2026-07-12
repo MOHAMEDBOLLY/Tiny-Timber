@@ -1,0 +1,1269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <title>Little Handmade - Painted Keychains</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg: #FFF8F0;
+            --card: #FFFFFF;
+            --text: #4A3F35;
+            --text-light: #7d7d7d;
+            --primary: #C98276;
+            --accent: #8FB9A8;
+            --border: #E8DFD5;
+        }
+
+        :root[data-theme="dark"] {
+            --bg: #1E1A17;
+            --card: #2A2420;
+            --text: #F7EDE2;
+            --text-light: #C0B0A0;
+            --primary: #D98C8C;
+            --accent: #A8C3B5;
+            --border: #3A302A;
+        }
+
+        body,
+        button,
+        input,
+        textarea,
+        select {
+            font-family: 'Quicksand', sans-serif;
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            overflow-x: hidden;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        .brand-title {
+            font-family: 'Quicksand', sans-serif;
+            font-size: 32px;
+            font-weight: 700;
+            letter-spacing: 0;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding-bottom: 80px;
+        }
+
+        /* Header */
+        header {
+            padding: 20px;
+            background: var(--card);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .brand-section {
+            text-align: center;
+            flex: 1;
+        }
+
+        .brand-logo {
+            width: 40px;
+            height: 40px;
+            margin: 0 auto 8px;
+            color: var(--primary);
+        }
+
+        h1 {
+            font-family: 'Quicksand', sans-serif;
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--text);
+            margin: 0;
+        }
+
+        .tagline {
+            font-size: 11px;
+            color: var(--text-light);
+            margin-top: 2px;
+            font-weight: 500;
+            letter-spacing: 0.5px;
+        }
+
+        .theme-toggle {
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: var(--text);
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s;
+        }
+
+        .theme-toggle:hover {
+            color: var(--primary);
+        }
+
+        .theme-toggle svg {
+            width: 20px;
+            height: 20px;
+        }
+
+        /* Navigation */
+        nav {
+            display: flex;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: var(--card);
+            border-top: 1px solid var(--border);
+            z-index: 100;
+        }
+
+        .nav-item {
+            flex: 1;
+            padding: 12px;
+            text-align: center;
+            background: none;
+            border: none;
+            cursor: pointer;
+            transition: all 0.3s;
+            color: var(--text-light);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        .nav-item svg {
+            width: 24px;
+            height: 24px;
+        }
+
+        .nav-item.active {
+            color: var(--primary);
+        }
+
+        /* Screens */
+        .screen {
+            display: none;
+            animation: fadeIn 0.3s ease-in;
+        }
+
+        .screen.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        /* Content */
+        .content {
+            padding: 20px;
+        }
+
+        .section-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin: 24px 0 16px;
+            color: var(--text);
+        }
+
+        .categories {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+
+        .category-chip {
+            padding: 12px;
+            background: var(--border);
+            border: 2px solid transparent;
+            border-radius: 20px;
+            text-align: center;
+            cursor: pointer;
+            font-size: 13px;
+            transition: all 0.3s;
+        }
+
+        .category-chip.active {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+
+        /* Product Grid */
+        .product-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 16px;
+        }
+
+        .product-card {
+            background: var(--card);
+            border-radius: 16px;
+            padding: 12px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .product-card:active {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .product-image {
+            width: 100%;
+            aspect-ratio: 1 / 1;
+            background: var(--border);
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        .product-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .product-image-fallback {
+            width: 40%;
+            height: 40%;
+            color: var(--primary);
+            opacity: 0.5;
+        }
+
+        .product-info {
+            padding: 12px 4px 4px;
+        }
+
+        .product-name {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--text);
+            margin-bottom: 4px;
+        }
+
+        .product-category {
+            font-size: 11px;
+            color: var(--text-light);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 8px;
+        }
+
+        .product-details {
+            display: flex;
+            justify-content: space-between;
+            font-size: 13px;
+            color: var(--text-light);
+            margin-bottom: 12px;
+        }
+
+        .product-price {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 8px;
+        }
+
+        .stock-status {
+            font-size: 11px;
+            color: var(--primary);
+            margin-bottom: 12px;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn:active {
+            transform: scale(0.98);
+        }
+
+        /* Custom Studio */
+        .studio-step {
+            display: none;
+        }
+
+        .studio-step.active {
+            display: block;
+            animation: fadeIn 0.3s ease-in;
+        }
+
+        .step-indicator {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 20px;
+        }
+
+        .step-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--border);
+            flex: 1;
+            max-width: 40px;
+        }
+
+        .step-dot.active {
+            background: var(--primary);
+        }
+
+        .step-dot.done {
+            background: var(--accent);
+        }
+
+        .step-title {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 20px;
+            color: var(--text);
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+            background: var(--card);
+            padding: 16px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+
+        .form-label {
+            font-size: 13px;
+            font-weight: 600;
+            margin-bottom: 12px;
+            display: block;
+            color: var(--primary);
+        }
+
+        .option-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .option-btn {
+            padding: 14px;
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 600;
+            transition: all 0.3s;
+            color: var(--text);
+        }
+
+        .option-btn.selected {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+
+        .color-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 10px;
+        }
+
+        .color-circle {
+            display: block;
+            aspect-ratio: 1;
+            border-radius: 50%;
+            border: 2px solid var(--border);
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .color-circle:active {
+            transform: scale(0.9);
+        }
+
+        .color-circle.selected {
+            border: 3px solid var(--primary);
+        }
+
+        input[type="text"],
+        textarea {
+            width: 100%;
+            padding: 12px;
+            background: var(--card);
+            color: var(--text);
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            font-size: 14px;
+            font-family: inherit;
+            transition: all 0.3s;
+        }
+
+        input[type="text"]:focus,
+        textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        /* Preview */
+        .preview-card {
+            background: var(--card);
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+
+        .preview-keychain {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            border: 2px solid var(--border);
+            color: var(--text);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 32px;
+            font-weight: 700;
+            margin: 0 auto 16px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .preview-info {
+            font-size: 12px;
+            color: var(--text);
+            line-height: 1.8;
+            margin-bottom: 16px;
+        }
+
+        .price-display {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 16px;
+        }
+
+        /* Bag */
+        .bag-item {
+            background: var(--card);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+
+        .bag-item-info {
+            flex: 1;
+        }
+
+        .bag-item-name {
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .bag-item-details {
+            font-size: 12px;
+            color: var(--text);
+        }
+
+        .bag-item-price {
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        .bag-total {
+            background: var(--card);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 16px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+
+        .total-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            font-size: 14px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .total-row.final {
+            border-bottom: none;
+            border-top: 2px solid var(--primary);
+            padding-top: 12px;
+            margin-top: 12px;
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        /* Steps */
+        .step-buttons {
+            display: flex;
+            gap: 10px;
+            padding: 20px 0;
+        }
+
+        .step-buttons button {
+            flex: 1;
+            padding: 14px;
+        }
+
+        .btn-secondary {
+            background: var(--card);
+            color: var(--text);
+            border: 1px solid var(--border);
+        }
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: var(--text);
+        }
+
+        .empty-emoji {
+            width: 48px;
+            height: 48px;
+            margin: 0 auto 12px;
+            color: var(--text-light);
+            stroke-width: 1.5;
+        }
+
+        .empty-state p {
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        /* Gallery */
+        .gallery-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        .gallery-card {
+            aspect-ratio: 1;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            color: white;
+            text-align: center;
+            padding: 12px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .gallery-text {
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+
+        .gallery-colors {
+            font-size: 11px;
+            opacity: 0.9;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="brand-section">
+            <svg class="brand-logo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"></circle>
+                <path d="M12 2c0 0 -3 2 -3 5c0 2 1 3 3 5c2 -2 3 -3 3 -5c0 -3 -3 -5 -3 -5"></path>
+            </svg>
+            <h1>Tiny Timber</h1>
+            <p class="tagline">Small pieces, big stories</p>
+        </div>
+        <button class="theme-toggle" onclick="toggleTheme()" title="Toggle theme">
+            <svg id="themeIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="5"></circle>
+                <line x1="12" y1="1" x2="12" y2="3"></line>
+                <line x1="12" y1="21" x2="12" y2="23"></line>
+                <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                <line x1="1" y1="12" x2="3" y2="12"></line>
+                <line x1="21" y1="12" x2="23" y2="12"></line>
+                <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+            </svg>
+        </button>
+    </header>
+
+    <div class="container">
+        <!-- Home Screen -->
+        <div class="screen active" id="homeScreen">
+            <div class="content">
+                <div class="section-title">Collections</div>
+                <div class="categories" id="categoryChips"></div>
+
+                <div class="section-title" id="readyTitle">Ready Designs</div>
+                <div class="product-grid" id="productGrid"></div>
+            </div>
+        </div>
+
+        <!-- Custom Studio Screen -->
+        <div class="screen" id="studioScreen">
+            <div class="content">
+                <div class="step-indicator" id="stepIndicator"></div>
+
+                <div class="studio-step active" id="step1">
+                    <div class="step-title">Choose Your Size</div>
+                    <div class="form-group">
+                        <div class="option-group" id="sizeOptions"></div>
+                    </div>
+                    <div class="step-buttons">
+                        <button class="btn" onclick="nextStep()">Next</button>
+                    </div>
+                </div>
+
+                <div class="studio-step" id="step2">
+                    <div class="step-title">Pick Two Colors </div>
+                    <div class="form-group">
+                        <label class="form-label">Main Color</label>
+                        <div class="color-grid" id="mainColorGrid"></div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Accent Color</label>
+                        <div class="color-grid" id="accentColorGrid"></div>
+                    </div>
+                    <div class="step-buttons">
+                        <button class="btn-secondary btn" onclick="prevStep()">Back</button>
+                        <button class="btn" onclick="nextStep()">Next</button>
+                    </div>
+                </div>
+
+                <div class="studio-step" id="step3">
+                    <div class="step-title">Your Message</div>
+                    <div class="form-group">
+                        <label class="form-label">Message Type</label>
+                        <div class="option-group">
+                            <button class="option-btn selected" onclick="setTextType(this, 'letter')">Letter</button>
+                            <button class="option-btn" onclick="setTextType(this, 'name')">Name</button>
+                            <button class="option-btn" onclick="setTextType(this, 'quote')">Quote</button>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Language</label>
+                        <div class="option-group">
+                            <button class="option-btn selected" onclick="setLanguage(this, 'en')">English</button>
+                            <button class="option-btn" onclick="setLanguage(this, 'ar')">العربية</button>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Your Text</label>
+                        <input type="text" id="customText" placeholder="A" maxlength="1" oninput="updatePreview()">
+                    </div>
+
+                    <div class="step-buttons">
+                        <button class="btn-secondary btn" onclick="prevStep()">Back</button>
+                        <button class="btn" onclick="nextStep()">Preview</button>
+                    </div>
+                </div>
+
+                <div class="studio-step" id="step4">
+                    <div class="step-title">Your Keychain</div>
+                    <div class="preview-card">
+                        <div class="preview-keychain" id="previewKeychain" style="background: var(--card);">A</div>
+                        <div class="preview-info" id="previewInfo">
+                            <div>Main: White</div>
+                            <div>Accent: Black</div>
+                            <div style="margin-top: 8px;">Small</div>
+                        </div>
+                        <div class="price-display" id="previewPrice">150 EGP</div>
+                    </div>
+                    <div class="step-buttons">
+                        <button class="btn-secondary btn" onclick="prevStep()">Back</button>
+                        <button class="btn" onclick="addCustomToCart()">Create Mine </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- My Bag Screen -->
+        <div class="screen" id="bagScreen">
+            <div class="content">
+                <div class="section-title">My Bag</div>
+                <div id="bagItems"></div>
+
+                <div id="emptyBag" class="empty-state">
+                    <svg class="empty-emoji" data-lucide="shopping-bag"></svg>
+                    <p>Your bag is empty.<br>Time to find something special!</p>
+                </div>
+
+                <div id="bagCheckout"></div>
+            </div>
+        </div>
+
+        <!-- Gallery Screen -->
+        <div class="screen" id="galleryScreen">
+            <div class="content">
+                <div class="section-title">Made By Customers</div>
+                <div class="gallery-grid" id="galleryGrid"></div>
+            </div>
+        </div>
+    </div>
+
+    <nav>
+        <button class="nav-item active" onclick="switchScreen('home')">
+            <svg data-lucide="home"></svg>
+            Shop
+        </button>
+        <button class="nav-item" onclick="switchScreen('studio')">
+            <svg data-lucide="palette"></svg>
+            Custom
+        </button>
+        <button class="nav-item" onclick="switchScreen('gallery')">
+            <svg data-lucide="images"></svg>
+            Gallery
+        </button>
+        <button class="nav-item" onclick="switchScreen('bag')">
+            <svg data-lucide="shopping-bag"></svg>
+            Bag
+        </button>
+    </nav>
+
+    <script>
+        const appData = {
+            products: [
+                { id: 1, name: 'Dream Big', category: 'Positive Vibes', image: './images/products/dream-big.jpg', size: 'large', price: 150, quantity: 2, type: 'ready' },
+                { id: 2, name: 'Be Kind', category: 'Positive Vibes', image: './images/products/be-kind.jpg', size: 'small', price: 120, quantity: 4, type: 'ready' },
+                { id: 3, name: 'Smile', category: 'Positive Vibes', image: './images/products/smile.jpg', size: 'small', price: 120, quantity: 3, type: 'ready' },
+                { id: 4, name: 'Panda', category: 'Cute Friends', image: './images/products/panda.jpg', size: 'small', price: 120, quantity: 1, type: 'ready' },
+                { id: 5, name: 'Cat', category: 'Cute Friends', image: './images/products/cat.jpg', size: 'small', price: 120, quantity: 3, type: 'ready' },
+                { id: 6, name: 'Flower', category: 'Soft & Floral', image: './images/products/flower.jpg', size: 'small', price: 120, quantity: 2, type: 'ready' }
+            ],
+            cart: [],
+            customDesigns: [],
+            categories: ['All', 'Positive Vibes', 'Cute Friends', 'Soft & Floral'],
+            paintColors: [
+                { name: 'Cream', hex: '#FFF8F0' },
+                { name: 'Rose', hex: '#D98C8C' },
+                { name: 'Sage', hex: '#8FB9A8' },
+                { name: 'Yellow', hex: '#F4C95D' },
+                { name: 'Beige', hex: '#F6E7D8' },
+                { name: 'Coffee', hex: '#4A3F35' },
+                { name: 'White', hex: '#FFFFFF' },
+                { name: 'Black', hex: '#000000' },
+                { name: 'Red', hex: '#E74C3C' },
+                { name: 'Pink', hex: '#FF69B4' },
+                { name: 'Purple', hex: '#9B59B6' },
+                { name: 'Blue', hex: '#3498DB' },
+                { name: 'Green', hex: '#27AE60' },
+                { name: 'Orange', hex: '#E67E22' },
+                { name: 'Turquoise', hex: '#1ABC9C' },
+                { name: 'Gray', hex: '#95A5A6' },
+                { name: 'Navy', hex: '#2C3E50' },
+                { name: 'Coral', hex: '#FF7F50' },
+                { name: 'Lavender', hex: '#DDA0DD' },
+                { name: 'Gold', hex: '#FFD700' }
+            ],
+            sizes: [
+                { name: 'Small', value: 'small', price: 120 },
+                { name: 'Large', value: 'large', price: 150 }
+            ]
+        };
+
+        let currentScreen = 'home';
+        let currentStep = 1;
+        let selectedSize = { name: 'Small', value: 'small', price: 120 };
+        let selectedMainColor = null;
+        let selectedAccentColor = null;
+        let selectedTextType = 'letter';
+        let selectedLanguage = 'en';
+        let activeCategory = 'All';
+
+        // LocalStorage
+        function loadData() {
+            const saved = localStorage.getItem('handmadeShop');
+            if (saved) {
+                const loaded = JSON.parse(saved);
+                appData.cart = loaded.cart || [];
+                appData.customDesigns = loaded.customDesigns || [];
+                // TEMP TEST: bypassing cached products so real image paths always win.
+                // appData.products = loaded.products || appData.products;
+            }
+        }
+
+        function saveData() {
+            localStorage.setItem('handmadeShop', JSON.stringify({
+                cart: appData.cart,
+                customDesigns: appData.customDesigns,
+                products: appData.products
+            }));
+        }
+
+        // Init
+        // Theme Management
+        function initTheme() {
+            const savedTheme = localStorage.getItem('theme') || 'light';
+            document.documentElement.setAttribute('data-theme', savedTheme);
+            if (window.lucide) { lucide.createIcons(); }
+        }
+
+        function toggleTheme() {
+            const html = document.documentElement;
+            const currentTheme = html.getAttribute('data-theme');
+            const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+            html.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+            if (window.lucide) { lucide.createIcons(); }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            initTheme();
+            loadData();
+            renderCategories();
+            renderProducts();
+            renderGallery();
+            renderBag();
+            renderStudio();
+            if (window.lucide) { lucide.createIcons(); }
+        });
+
+        // Navigation
+        function switchScreen(screen) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+
+            const screenMap = {
+                'home': 'homeScreen',
+                'studio': 'studioScreen',
+                'gallery': 'galleryScreen',
+                'bag': 'bagScreen'
+            };
+
+            if (screenMap[screen]) {
+                document.getElementById(screenMap[screen]).classList.add('active');
+                event.target.classList.add('active');
+                currentScreen = screen;
+                window.scrollTo(0, 0);
+            }
+        }
+
+        // Categories
+        function renderCategories() {
+            document.getElementById('categoryChips').innerHTML = appData.categories
+                .map(cat => `<button class="category-chip ${cat === activeCategory ? 'active' : ''}" onclick="filterByCategory('${cat}')">${cat}</button>`)
+                .join('');
+        }
+
+        function filterByCategory(cat) {
+            activeCategory = cat;
+            renderCategories();
+            renderProducts();
+        }
+
+        // Products
+        function renderProducts() {
+            const grid = document.getElementById('productGrid');
+            const filtered = activeCategory === 'All'
+                ? appData.products
+                : appData.products.filter(p => p.category === activeCategory);
+
+            if (filtered.length === 0) {
+                grid.innerHTML = '<div class="empty-state" style="grid-column: 1/-1;"><svg class="empty-emoji" data-lucide="package-search"></svg><p>No designs in this category yet.</p></div>';
+                if (window.lucide) { lucide.createIcons(); }
+                return;
+            }
+
+            grid.innerHTML = filtered.map(p => `
+                <div class="product-card" onclick="addReadyToCart(${p.id})">
+                    <div class="product-image">
+                        ${p.image ? `<img src="${p.image}" alt="${p.name}" onload="console.log('Loaded:', '${p.image}')" onerror="console.error('Failed:', '${p.image}')">` : `<svg class="product-image-fallback" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><path d="M12 2c0 0 -3 2 -3 5c0 2 1 3 3 5c2 -2 3 -3 3 -5c0 -3 -3 -5 -3 -5"></path></svg>`}
+                    </div>
+                    <div class="product-info">
+                        <div class="product-name">${p.name}</div>
+                        <div class="product-category">${p.category}</div>
+                        <div class="product-details">
+                            <span>${p.size === 'small' ? 'Small' : 'Large'}</span>
+                            <span>${p.price} EGP</span>
+                        </div>
+                        <div class="stock-status">Only ${p.quantity} left</div>
+                        <button class="btn" onclick="event.stopPropagation(); addReadyToCart(${p.id})">Add to My Bag</button>
+                    </div>
+                </div>
+            `).join('');
+
+            console.table(appData.products.map(p => ({ name: p.name, image: p.image })));
+        }
+
+        // Custom Studio
+        function renderStudio() {
+            renderStepIndicator();
+
+            document.getElementById('sizeOptions').innerHTML = appData.sizes
+                .map(s => `<button class="option-btn ${s.value === selectedSize.value ? 'selected' : ''}" onclick="selectSize('${s.value}', '${s.name}', ${s.price})">${s.name}</button>`)
+                .join('');
+
+            document.getElementById('mainColorGrid').innerHTML = appData.paintColors
+                .map(c => `<div class="color-circle ${selectedMainColor?.hex === c.hex ? 'selected' : ''}" style="background: ${c.hex};" onclick="selectMainColor('${c.name}', '${c.hex}')"></div>`)
+                .join('');
+
+            document.getElementById('accentColorGrid').innerHTML = appData.paintColors
+                .map(c => `<div class="color-circle ${selectedAccentColor?.hex === c.hex ? 'selected' : ''}" style="background: ${c.hex};" onclick="selectAccentColor('${c.name}', '${c.hex}')"></div>`)
+                .join('');
+        }
+
+        function renderStepIndicator() {
+            document.getElementById('stepIndicator').innerHTML = Array(4).fill(0)
+                .map((_, i) => `<div class="step-dot ${i < currentStep ? 'done' : ''} ${i === currentStep - 1 ? 'active' : ''}"></div>`)
+                .join('');
+        }
+
+        function selectSize(value, name, price) {
+            document.querySelectorAll('#sizeOptions .option-btn').forEach(b => b.classList.remove('selected'));
+            event.target.classList.add('selected');
+            selectedSize = { value, name, price };
+            updatePreview();
+        }
+
+        function selectMainColor(name, hex) {
+            document.querySelectorAll('#mainColorGrid .color-circle').forEach(c => c.classList.remove('selected'));
+            event.target.classList.add('selected');
+            selectedMainColor = { name, hex };
+            updatePreview();
+        }
+
+        function selectAccentColor(name, hex) {
+            document.querySelectorAll('#accentColorGrid .color-circle').forEach(c => c.classList.remove('selected'));
+            event.target.classList.add('selected');
+            selectedAccentColor = { name, hex };
+            updatePreview();
+        }
+
+        function setTextType(el, type) {
+            document.querySelectorAll('#step3 .option-group:first-of-type .option-btn').forEach(b => b.classList.remove('selected'));
+            el.classList.add('selected');
+            selectedTextType = type;
+            updateTextInput();
+        }
+
+        function setLanguage(el, lang) {
+            document.querySelectorAll('#step3 .option-group:nth-of-type(2) .option-btn').forEach(b => b.classList.remove('selected'));
+            el.classList.add('selected');
+            selectedLanguage = lang;
+            updateTextInput();
+        }
+
+        function updateTextInput() {
+            const input = document.getElementById('customText');
+            const placeholders = {
+                letter_en: 'A',
+                letter_ar: 'س',
+                name_en: 'Name',
+                name_ar: 'الاسم',
+                quote_en: 'Quote',
+                quote_ar: 'اقتباس'
+            };
+            input.placeholder = placeholders[selectedTextType + '_' + selectedLanguage];
+            input.maxLength = selectedTextType === 'letter' ? 1 : 30;
+        }
+
+        function updatePreview() {
+            const text = document.getElementById('customText')?.value || 'A';
+            const preview = document.getElementById('previewKeychain');
+            if (preview) {
+                preview.textContent = text;
+                preview.style.background = selectedMainColor?.hex || 'var(--card)';
+                preview.style.color = !selectedMainColor ? 'var(--text)' : (selectedMainColor.hex === '#FFFFFF' ? '#000' : '#fff');
+                preview.style.borderColor = selectedAccentColor?.hex || 'var(--border)';
+                preview.style.borderWidth = selectedAccentColor ? '4px' : '2px';
+            }
+
+            const info = document.getElementById('previewInfo');
+            if (info) {
+                info.innerHTML = `
+                    <div>Main: ${selectedMainColor?.name || 'White'}</div>
+                    <div>Accent: ${selectedAccentColor?.name || 'Black'}</div>
+                    <div style="margin-top: 8px;">${selectedSize.name}</div>
+                `;
+            }
+
+            const price = document.getElementById('previewPrice');
+            if (price) {
+                price.textContent = selectedSize.price + ' EGP';
+            }
+        }
+
+        function nextStep() {
+            if (currentStep === 2 && (!selectedMainColor || !selectedAccentColor)) {
+                alert('Please choose two colors!');
+                return;
+            }
+            if (currentStep < 4) {
+                currentStep++;
+                showStep(currentStep);
+                if (currentStep === 1) renderStudio();
+            }
+        }
+
+        function prevStep() {
+            if (currentStep > 1) {
+                currentStep--;
+                showStep(currentStep);
+            }
+        }
+
+        function showStep(step) {
+            document.querySelectorAll('.studio-step').forEach(s => s.classList.remove('active'));
+            document.getElementById('step' + step).classList.add('active');
+            renderStepIndicator();
+            updatePreview();
+            window.scrollTo(0, 0);
+        }
+
+        function addCustomToCart() {
+            const text = document.getElementById('customText').value.trim();
+            if (!text) {
+                alert('Please enter your text!');
+                return;
+            }
+
+            const item = {
+                id: Date.now(),
+                type: 'custom',
+                text: text,
+                mainColor: selectedMainColor.name,
+                accentColor: selectedAccentColor.name,
+                mainColorHex: selectedMainColor.hex,
+                accentColorHex: selectedAccentColor.hex,
+                size: selectedSize.value,
+                sizeName: selectedSize.name,
+                price: selectedSize.price,
+                language: selectedLanguage,
+                textType: selectedTextType
+            };
+
+            appData.cart.push(item);
+            appData.customDesigns.push({ text, colors: [selectedMainColor.name, selectedAccentColor.name], size: selectedSize.name });
+            saveData();
+            renderGallery();
+            renderBag();
+
+            alert('Added to bag!');
+            resetStudio();
+            switchScreen('bag');
+        }
+
+        function resetStudio() {
+            currentStep = 1;
+            selectedSize = { name: 'Small', value: 'small', price: 120 };
+            selectedMainColor = null;
+            selectedAccentColor = null;
+            selectedTextType = 'letter';
+            selectedLanguage = 'en';
+            document.getElementById('customText').value = '';
+            renderStudio();
+            showStep(1);
+        }
+
+        // Cart
+        function addReadyToCart(productId) {
+            const product = appData.products.find(p => p.id === productId);
+            if (!product || product.quantity <= 0) {
+                alert('Out of stock!');
+                return;
+            }
+
+            const item = {
+                id: Date.now(),
+                type: 'ready',
+                productId: productId,
+                name: product.name,
+                size: product.size,
+                sizeName: product.size === 'small' ? 'Small' : 'Large',
+                price: product.price
+            };
+
+            appData.cart.push(item);
+            product.quantity--;
+            saveData();
+            renderProducts();
+            renderBag();
+            alert('Added to bag!');
+        }
+
+        function removeFromCart(idx) {
+            appData.cart.splice(idx, 1);
+            saveData();
+            renderBag();
+        }
+
+        function renderBag() {
+            const container = document.getElementById('bagItems');
+            const checkout = document.getElementById('bagCheckout');
+            const empty = document.getElementById('emptyBag');
+
+            if (appData.cart.length === 0) {
+                container.innerHTML = '';
+                checkout.innerHTML = '';
+                empty.style.display = 'block';
+                return;
+            }
+
+            empty.style.display = 'none';
+
+            let total = 0;
+            container.innerHTML = appData.cart.map((item, idx) => {
+                total += item.price;
+                const displayName = item.type === 'custom' ? item.text : item.name;
+                const displayDetails = item.type === 'custom'
+                    ? `${item.sizeName} - ${item.mainColor} + ${item.accentColor}`
+                    : `${item.sizeName}`;
+                return `
+                    <div class="bag-item">
+                        <div class="bag-item-info">
+                            <div class="bag-item-name">${displayName}</div>
+                            <div class="bag-item-details">${displayDetails}</div>
+                        </div>
+                        <div style="text-align: right;">
+                            <div class="bag-item-price">${item.price} EGP</div>
+                            <button style="background: none; border: none; color: var(--text); cursor: pointer; font-size: 14px;" onclick="removeFromCart(${idx})">Remove</button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            checkout.innerHTML = `
+                <div class="bag-total">
+                    <div class="total-row">
+                        <span>Subtotal</span>
+                        <span>${total} EGP</span>
+                    </div>
+                    <div class="total-row final">
+                        <span>Total</span>
+                        <span>${total} EGP</span>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Your Name</label>
+                    <input type="text" id="orderName" placeholder="Full name">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Phone Number</label>
+                    <input type="text" id="orderPhone" placeholder="+20 XXX XXX XXXX">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">How to receive?</label>
+                    <div class="option-group">
+                        <button class="option-btn selected" onclick="setDelivery(this, 'pickup')">Booth Pickup</button>
+                        <button class="option-btn" onclick="setDelivery(this, 'delivery')">Delivery</button>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Notes (Optional)</label>
+                    <textarea id="orderNotes" placeholder="Any special requests?" style="min-height: 60px;"></textarea>
+                </div>
+
+                <button class="btn" onclick="submitOrder()">Send Order</button>
+            `;
+
+            renderStudio();
+        }
+
+        let deliveryType = 'pickup';
+
+        function setDelivery(el, type) {
+            document.querySelectorAll('.option-group button').forEach(b => b.classList.remove('selected'));
+            el.classList.add('selected');
+            deliveryType = type;
+        }
+
+        function submitOrder() {
+            const name = document.getElementById('orderName').value.trim();
+            const phone = document.getElementById('orderPhone').value.trim();
+
+            if (!name || !phone) {
+                alert('Please fill in your name and phone!');
+                return;
+            }
+
+            const order = {
+                id: Date.now(),
+                name, phone, deliveryType,
+                notes: document.getElementById('orderNotes').value.trim(),
+                items: appData.cart,
+                total: appData.cart.reduce((s, i) => s + i.price, 0),
+                status: 'new',
+                date: new Date().toLocaleString()
+            };
+
+            // Save order
+            const orders = JSON.parse(localStorage.getItem('handmadeOrders') || '[]');
+            orders.push(order);
+            localStorage.setItem('handmadeOrders', JSON.stringify(orders));
+
+            appData.cart = [];
+            saveData();
+            renderBag();
+
+            alert(`Order sent! We'll contact you at ${phone}`);
+            switchScreen('home');
+        }
+
+        // Gallery
+        function renderGallery() {
+            const grid = document.getElementById('galleryGrid');
+            const designs = JSON.parse(localStorage.getItem('handmadeGallery') || '[]');
+
+            if (designs.length === 0) {
+                grid.innerHTML = '<div class="empty-state" style="grid-column: 1/-1;"><svg class="empty-emoji" data-lucide="images"></svg><p>Custom designs coming soon!</p></div>';
+                if (window.lucide) { lucide.createIcons(); }
+                return;
+            }
+
+            grid.innerHTML = designs.map(d => `
+                <div class="gallery-card" style="background: none; padding: 0;">
+                    <img src="${d.image}" alt="${d.caption || 'Customer design'}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 12px;">
+                </div>
+            `).join('');
+        }
+    </script>
+</body>
+</html>
