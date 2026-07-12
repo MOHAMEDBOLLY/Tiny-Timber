@@ -4,11 +4,18 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Tiny Timber">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#8B5A2B">
+    <link rel="manifest" href="manifest.webmanifest">
+    <link rel="apple-touch-icon" href="images/icons/apple-touch-icon.png">
     <title>Little Handmade - Painted Keychains</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    <script src="pwa.js" defer></script>
     <style>
         * {
             margin: 0;
@@ -821,8 +828,7 @@
                 const loaded = JSON.parse(saved);
                 appData.cart = loaded.cart || [];
                 appData.customDesigns = loaded.customDesigns || [];
-                // TEMP TEST: bypassing cached products so real image paths always win.
-                // appData.products = loaded.products || appData.products;
+                appData.products = loaded.products || appData.products;
             }
         }
 
@@ -911,7 +917,7 @@
             grid.innerHTML = filtered.map(p => `
                 <div class="product-card" onclick="addReadyToCart(${p.id})">
                     <div class="product-image">
-                        ${p.image ? `<img src="${p.image}" alt="${p.name}" onload="console.log('Loaded:', '${p.image}')" onerror="console.error('Failed:', '${p.image}')">` : `<svg class="product-image-fallback" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><path d="M12 2c0 0 -3 2 -3 5c0 2 1 3 3 5c2 -2 3 -3 3 -5c0 -3 -3 -5 -3 -5"></path></svg>`}
+                        ${p.image ? `<img src="${p.image}" alt="${p.name}" loading="lazy">` : `<svg class="product-image-fallback" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><path d="M12 2c0 0 -3 2 -3 5c0 2 1 3 3 5c2 -2 3 -3 3 -5c0 -3 -3 -5 -3 -5"></path></svg>`}
                     </div>
                     <div class="product-info">
                         <div class="product-name">${p.name}</div>
@@ -925,8 +931,6 @@
                     </div>
                 </div>
             `).join('');
-
-            console.table(appData.products.map(p => ({ name: p.name, image: p.image })));
         }
 
         // Custom Studio
@@ -1260,7 +1264,7 @@
 
             grid.innerHTML = designs.map(d => `
                 <div class="gallery-card" style="background: none; padding: 0;">
-                    <img src="${d.image}" alt="${d.caption || 'Customer design'}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 12px;">
+                    <img src="${d.image}" alt="${d.caption || 'Customer design'}" loading="lazy" style="width: 100%; height: 100%; object-fit: cover; border-radius: 12px;">
                 </div>
             `).join('');
         }

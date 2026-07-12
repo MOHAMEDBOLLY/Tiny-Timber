@@ -4,11 +4,20 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Tiny Timber">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#8B5A2B">
+    <link rel="manifest" href="manifest.webmanifest">
+    <link rel="apple-touch-icon" href="images/icons/apple-touch-icon.png">
     <title>Creator Dashboard - Little Handmade</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+    <script src="pwa.js" defer></script>
     <style>
         * {
             margin: 0;
@@ -909,6 +918,29 @@
                 <canvas id="cameraCanvas" style="display: none;"></canvas>
             </div>
         </div>
+
+        <!-- Settings Screen -->
+        <div class="screen" id="settingsScreen">
+            <div class="content">
+                <div class="section-title">Settings</div>
+
+                <div class="card">
+                    <div class="card-title">Backup & Restore</div>
+                    <div class="card-detail" id="lastBackupText">Last backup: Never</div>
+
+                    <button class="btn" style="width: 100%; margin-top: 12px;" onclick="exportBackup()">Export Data</button>
+
+                    <button class="btn-sm-secondary" style="width: 100%; margin-top: 10px; padding: 12px;" onclick="document.getElementById('restoreBackupInput').click()">Restore Backup</button>
+                    <input type="file" id="restoreBackupInput" accept="application/json,.json" style="display: none;" onchange="handleRestoreFile()">
+                </div>
+
+                <div class="card">
+                    <div class="card-title">Reset Demo Data</div>
+                    <div class="card-detail">Erases all products, orders, sales, materials and gallery photos, and restores the original demo data.</div>
+                    <button class="btn-sm-secondary" style="width: 100%; margin-top: 12px; padding: 12px; color: var(--primary);" onclick="resetDemoData()">Reset Demo Data</button>
+                </div>
+            </div>
+        </div>
     </div>
 
     <nav>
@@ -944,6 +976,10 @@
             <svg data-lucide="camera"></svg>
             Camera
         </button>
+        <button class="nav-item" onclick="switchTab('settings')">
+            <svg data-lucide="settings"></svg>
+            Settings
+        </button>
     </nav>
 
     <script>
@@ -974,6 +1010,8 @@
             }
         };
 
+        const DEFAULT_PRODUCTS = JSON.parse(JSON.stringify(appData.products));
+
         let designSize = 'small';
 
         function loadData() {
@@ -986,6 +1024,16 @@
             if (orders) {
                 appData.orders = JSON.parse(orders);
             }
+            const boothSales = localStorage.getItem('handmadeBoothSales');
+            if (boothSales) {
+                appData.boothSales = JSON.parse(boothSales);
+            }
+            const materials = localStorage.getItem('handmadeMaterials');
+            if (materials) {
+                appData.materials = JSON.parse(materials);
+            } else {
+                localStorage.setItem('handmadeMaterials', JSON.stringify(appData.materials));
+            }
         }
 
         function saveData() {
@@ -995,6 +1043,149 @@
                 cart: []
             }));
             localStorage.setItem('handmadeOrders', JSON.stringify(appData.orders));
+            localStorage.setItem('handmadeBoothSales', JSON.stringify(appData.boothSales));
+        }
+
+        // Firestore product persistence
+        const firebaseConfig = {
+            apiKey: "AIzaSyAYsuLm0rnvZW_1RUXWwykX_cwl6Ui6iks",
+            authDomain: "tiny-timber.firebaseapp.com",
+            projectId: "tiny-timber",
+            storageBucket: "tiny-timber.firebasestorage.app",
+            messagingSenderId: "920454844975",
+            appId: "1:920454844975:web:a3af099aa076ac2682acda"
+        };
+
+        const PRODUCTS_COLLECTION = 'products';
+        const PRODUCTS_MIGRATION_FLAG = 'tinyTimberProductsMigrated';
+
+        let firestoreDb = null;
+        let firestoreEnabled = false;
+        let productsUnsubscribe = null;
+
+        try {
+            firebase.initializeApp(firebaseConfig);
+            firestoreDb = firebase.firestore();
+            firestoreEnabled = true;
+        } catch (err) {
+            console.error('Firestore init failed, falling back to LocalStorage for products:', err);
+            firestoreEnabled = false;
+        }
+
+        function renderProductViews() {
+            renderDesigns();
+            renderQuickSell();
+        }
+
+        async function migrateLocalProductsToFirestore() {
+            try {
+                const batch = firestoreDb.batch();
+                appData.products.forEach(p => {
+                    const ref = firestoreDb.collection(PRODUCTS_COLLECTION).doc();
+                    const { firestoreId, ...data } = p;
+                    batch.set(ref, data);
+                });
+                await batch.commit();
+                localStorage.setItem(PRODUCTS_MIGRATION_FLAG, 'true');
+            } catch (err) {
+                console.error('Firestore product migration failed, falling back to LocalStorage:', err);
+                firestoreEnabled = false;
+                renderProductViews();
+            }
+        }
+
+        function initProductsSync() {
+            if (!firestoreEnabled) {
+                return;
+            }
+
+            productsUnsubscribe = firestoreDb.collection(PRODUCTS_COLLECTION).onSnapshot((snapshot) => {
+                const migrationFlag = localStorage.getItem(PRODUCTS_MIGRATION_FLAG);
+                if (snapshot.empty && migrationFlag !== 'true') {
+                    migrateLocalProductsToFirestore();
+                    return;
+                }
+
+                const products = [];
+                snapshot.forEach(doc => {
+                    products.push({ ...doc.data(), firestoreId: doc.id });
+                });
+                appData.products = products;
+                saveData();
+                renderProductViews();
+            }, (error) => {
+                console.error('Firestore products listener error, falling back to LocalStorage:', error);
+                firestoreEnabled = false;
+                loadData();
+                renderProductViews();
+            });
+        }
+
+        async function createProduct(product) {
+            if (firestoreEnabled) {
+                try {
+                    await firestoreDb.collection(PRODUCTS_COLLECTION).add(product);
+                    return; // onSnapshot will update appData.products and re-render
+                } catch (err) {
+                    console.error('Firestore create product failed, falling back to LocalStorage:', err);
+                    firestoreEnabled = false;
+                }
+            }
+            appData.products.push(product);
+            saveData();
+            renderProductViews();
+        }
+
+        async function updateProduct(firestoreId, updates) {
+            if (firestoreEnabled && firestoreId) {
+                try {
+                    await firestoreDb.collection(PRODUCTS_COLLECTION).doc(firestoreId).update(updates);
+                    return; // onSnapshot will update appData.products and re-render
+                } catch (err) {
+                    console.error('Firestore update product failed, falling back to LocalStorage:', err);
+                    firestoreEnabled = false;
+                }
+            }
+            const p = appData.products.find(prod => prod.firestoreId === firestoreId);
+            if (p) Object.assign(p, updates);
+            saveData();
+            renderProductViews();
+        }
+
+        async function removeProduct(idx) {
+            const product = appData.products[idx];
+            if (firestoreEnabled && product && product.firestoreId) {
+                try {
+                    await firestoreDb.collection(PRODUCTS_COLLECTION).doc(product.firestoreId).delete();
+                    return; // onSnapshot will update appData.products and re-render
+                } catch (err) {
+                    console.error('Firestore delete product failed, falling back to LocalStorage:', err);
+                    firestoreEnabled = false;
+                }
+            }
+            appData.products.splice(idx, 1);
+            saveData();
+            renderProductViews();
+        }
+
+        // Wholesale product replacement, used by Restore Backup / Reset Demo Data so
+        // Firestore (the live source of truth) doesn't silently overwrite the restored/reset state.
+        async function replaceFirestoreProducts(products) {
+            if (!firestoreEnabled) return;
+            try {
+                const snapshot = await firestoreDb.collection(PRODUCTS_COLLECTION).get();
+                const batch = firestoreDb.batch();
+                snapshot.forEach(doc => batch.delete(doc.ref));
+                (products || []).forEach(p => {
+                    const ref = firestoreDb.collection(PRODUCTS_COLLECTION).doc();
+                    const { firestoreId, ...data } = p;
+                    batch.set(ref, data);
+                });
+                await batch.commit();
+            } catch (err) {
+                console.error('Firestore product replace failed, falling back to LocalStorage:', err);
+                firestoreEnabled = false;
+            }
         }
 
         // Theme Management
@@ -1022,6 +1213,8 @@
             renderDesigns();
             updateCalculator();
             renderMaterials();
+            updateLastBackupDisplay();
+            initProductsSync();
             if (window.lucide) { lucide.createIcons(); }
         });
 
@@ -1037,13 +1230,15 @@
                 'calculator': 'calculatorScreen',
                 'materials': 'materialsScreen',
                 'gallery': 'galleryScreen',
-                'camera': 'cameraScreen'
+                'camera': 'cameraScreen',
+                'settings': 'settingsScreen'
             };
 
             if (screenMap[tab]) {
                 document.getElementById(screenMap[tab]).classList.add('active');
                 (event.target.closest('.nav-item') || event.target).classList.add('active');
                 if (tab === 'gallery') renderGalleryPhotos();
+                if (tab === 'settings') updateLastBackupDisplay();
                 if (tab !== 'camera') stopCamera();
                 window.scrollTo(0, 0);
             }
@@ -1070,7 +1265,7 @@
             list.innerHTML = appData.products.map(p => `
                 <div class="quick-sell-btn">
                     <div class="quick-sell-row">
-                        ${p.thumbnail || p.image ? `<img class="quick-sell-thumb" src="${p.thumbnail || p.image}" alt="${p.name}">` : `<div class="quick-sell-thumb"></div>`}
+                        ${p.thumbnail || p.image ? `<img class="quick-sell-thumb" src="${p.thumbnail || p.image}" alt="${p.name}" loading="lazy">` : `<div class="quick-sell-thumb"></div>`}
                         <div class="quick-sell-info">
                             <div class="quick-sell-name">${p.name}</div>
                             <div class="quick-sell-details">Stock: ${p.quantity} • ${p.price} EGP</div>
@@ -1161,7 +1356,38 @@
             }
         }
 
-        function addDesign() {
+        // Cloudinary image persistence layer
+        const CLOUDINARY_CLOUD_NAME = 'dccx4npl';
+        const CLOUDINARY_UPLOAD_PRESET = 'Tiny Timber';
+        const CLOUDINARY_UPLOAD_URL = `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`;
+
+        async function uploadToCloudinary(base64Data) {
+            const formData = new FormData();
+            formData.append('file', base64Data);
+            formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
+
+            const response = await fetch(CLOUDINARY_UPLOAD_URL, {
+                method: 'POST',
+                body: formData
+            });
+
+            if (!response.ok) {
+                throw new Error('Cloudinary upload failed with status ' + response.status);
+            }
+
+            const result = await response.json();
+            if (!result.secure_url) {
+                throw new Error('Cloudinary response missing secure_url');
+            }
+
+            return result;
+        }
+
+        function getCloudinaryThumbnail(secureUrl) {
+            return secureUrl.replace('/upload/', '/upload/w_300,h_300,c_fill,q_auto/');
+        }
+
+        async function addDesign() {
             const name = document.getElementById('designName').value.trim();
             const category = document.getElementById('designCategory').value;
             const cost = parseFloat(document.getElementById('designCost').value);
@@ -1173,12 +1399,31 @@
                 return;
             }
 
+            // Default to existing Base64 workflow; replaced with Cloudinary URLs on successful upload.
+            let finalImage = designImageBase64;
+            let finalThumbnail = designThumbnailBase64 || designImageBase64;
+            let cloudinaryPublicId = null;
+
+            if (designImageBase64) {
+                try {
+                    const result = await uploadToCloudinary(designImageBase64);
+                    finalImage = result.secure_url;
+                    finalThumbnail = getCloudinaryThumbnail(result.secure_url);
+                    cloudinaryPublicId = result.public_id;
+                } catch (err) {
+                    console.error('Cloudinary upload error:', err);
+                    alert('Upload failed.\nUsing local image.');
+                    // finalImage/finalThumbnail already hold the Base64 fallback; product is not lost.
+                }
+            }
+
             const newProduct = {
                 id: Date.now(),
                 name,
                 category,
-                image: designImageBase64,
-                thumbnail: designThumbnailBase64 || designImageBase64,
+                image: finalImage,
+                thumbnail: finalThumbnail,
+                cloudinaryPublicId,
                 size: designSize,
                 price,
                 cost,
@@ -1186,10 +1431,7 @@
                 type: 'ready'
             };
 
-            appData.products.push(newProduct);
-            saveData();
-            renderDesigns();
-            renderQuickSell();
+            await createProduct(newProduct);
 
             document.getElementById('designName').value = '';
             document.getElementById('designCost').value = '';
@@ -1208,7 +1450,7 @@
             list.innerHTML = appData.products.map((p, i) => `
                 <div class="card">
                     <div class="design-image">
-                        ${p.thumbnail || p.image ? `<img src="${p.thumbnail || p.image}" alt="${p.name}">` : `<svg class="design-image-fallback" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><path d="M12 2c0 0 -3 2 -3 5c0 2 1 3 3 5c2 -2 3 -3 3 -5c0 -3 -3 -5 -3 -5"></path></svg>`}
+                        ${p.thumbnail || p.image ? `<img src="${p.thumbnail || p.image}" alt="${p.name}" loading="lazy">` : `<svg class="design-image-fallback" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><path d="M12 2c0 0 -3 2 -3 5c0 2 1 3 3 5c2 -2 3 -3 3 -5c0 -3 -3 -5 -3 -5"></path></svg>`}
                     </div>
                     <div class="card-title">${p.name}</div>
                     <div class="card-detail">${p.category}</div>
@@ -1220,12 +1462,9 @@
             `).join('');
         }
 
-        function deleteDesign(idx) {
+        async function deleteDesign(idx) {
             if (confirm('Delete this design?')) {
-                appData.products.splice(idx, 1);
-                saveData();
-                renderDesigns();
-                renderQuickSell();
+                await removeProduct(idx);
             }
         }
 
@@ -1323,7 +1562,7 @@
 
             list.innerHTML = gallery.map((photo, i) => `
                 <div class="card">
-                    <img src="${photo.image}" style="width: 100%; height: 150px; object-fit: cover; border-radius: 8px; margin-bottom: 12px;">
+                    <img src="${photo.image}" loading="lazy" style="width: 100%; height: 150px; object-fit: cover; border-radius: 8px; margin-bottom: 12px;">
                     <div class="card-detail">${photo.caption}</div>
                     <button class="btn-sm-secondary" style="width: 100%; margin-top: 8px;" onclick="deleteGalleryPhoto(${i})">Remove</button>
                 </div>
@@ -1515,6 +1754,142 @@
             const form = document.getElementById('addDesignForm');
             form.style.display = 'block';
             window.scrollTo(0, 0);
+        }
+
+        // Settings: Backup & Restore
+        function readLS(key) {
+            const raw = localStorage.getItem(key);
+            return raw ? JSON.parse(raw) : null;
+        }
+
+        function formatBackupDate(isoString) {
+            const date = new Date(isoString);
+            const day = date.getDate();
+            const month = date.toLocaleString('en-US', { month: 'long' });
+            const year = date.getFullYear();
+            return `${day} ${month} ${year}`;
+        }
+
+        function updateLastBackupDisplay() {
+            const el = document.getElementById('lastBackupText');
+            if (!el) return;
+            const last = localStorage.getItem('tinyTimberLastBackupDate');
+            el.textContent = last ? `Last backup: ${formatBackupDate(last)}` : 'Last backup: Never';
+        }
+
+        function exportBackup() {
+            saveData();
+            localStorage.setItem('handmadeMaterials', JSON.stringify(appData.materials));
+
+            const backup = {
+                app: 'Tiny Timber',
+                version: '3.3',
+                exportedAt: new Date().toISOString(),
+                data: {
+                    handmadeShop: readLS('handmadeShop'),
+                    handmadeOrders: readLS('handmadeOrders'),
+                    handmadeBoothSales: readLS('handmadeBoothSales'),
+                    handmadeMaterials: readLS('handmadeMaterials'),
+                    handmadeCosts: readLS('handmadeCosts'),
+                    handmadeGallery: readLS('handmadeGallery'),
+                    theme: localStorage.getItem('theme')
+                }
+            };
+
+            const json = JSON.stringify(backup, null, 2);
+            const blob = new Blob([json], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+
+            const now = new Date();
+            const yyyy = now.getFullYear();
+            const mm = String(now.getMonth() + 1).padStart(2, '0');
+            const dd = String(now.getDate()).padStart(2, '0');
+
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `tiny-timber-backup-${yyyy}-${mm}-${dd}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+
+            localStorage.setItem('tinyTimberLastBackupDate', now.toISOString());
+            updateLastBackupDisplay();
+            alert('Backup exported!');
+        }
+
+        function validateBackupData(payload) {
+            if (!payload || typeof payload !== 'object') return false;
+            const knownKeys = ['handmadeShop', 'handmadeOrders', 'handmadeBoothSales', 'handmadeMaterials', 'handmadeCosts', 'handmadeGallery'];
+            return knownKeys.some(k => k in payload);
+        }
+
+        async function restoreBackupData(payload) {
+            if (payload.handmadeShop) localStorage.setItem('handmadeShop', JSON.stringify(payload.handmadeShop));
+            if (payload.handmadeOrders) localStorage.setItem('handmadeOrders', JSON.stringify(payload.handmadeOrders));
+            if (payload.handmadeBoothSales) localStorage.setItem('handmadeBoothSales', JSON.stringify(payload.handmadeBoothSales));
+            if (payload.handmadeMaterials) localStorage.setItem('handmadeMaterials', JSON.stringify(payload.handmadeMaterials));
+            if (payload.handmadeCosts) localStorage.setItem('handmadeCosts', JSON.stringify(payload.handmadeCosts));
+            if (payload.handmadeGallery) localStorage.setItem('handmadeGallery', JSON.stringify(payload.handmadeGallery));
+            if (payload.theme) localStorage.setItem('theme', payload.theme);
+
+            if (payload.handmadeShop && payload.handmadeShop.products) {
+                await replaceFirestoreProducts(payload.handmadeShop.products);
+            }
+
+            alert('Backup restored! Refreshing dashboard...');
+            window.location.reload();
+        }
+
+        function handleRestoreFile() {
+            const input = document.getElementById('restoreBackupInput');
+            const file = input.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                let parsed;
+                try {
+                    parsed = JSON.parse(e.target.result);
+                } catch (err) {
+                    alert('This file is not valid JSON. Please choose a Tiny Timber backup file.');
+                    input.value = '';
+                    return;
+                }
+
+                const payload = parsed && parsed.data ? parsed.data : parsed;
+
+                if (!validateBackupData(payload)) {
+                    alert('This does not look like a valid Tiny Timber backup file.');
+                    input.value = '';
+                    return;
+                }
+
+                if (!confirm('This will replace current data. Continue?')) {
+                    input.value = '';
+                    return;
+                }
+
+                restoreBackupData(payload);
+            };
+            reader.readAsText(file);
+        }
+
+        async function resetDemoData() {
+            if (!confirm('This will erase all your data and restore the original demo products. This cannot be undone. Continue?')) return;
+
+            localStorage.removeItem('handmadeShop');
+            localStorage.removeItem('handmadeOrders');
+            localStorage.removeItem('handmadeBoothSales');
+            localStorage.removeItem('handmadeMaterials');
+            localStorage.removeItem('handmadeCosts');
+            localStorage.removeItem('handmadeGallery');
+            localStorage.removeItem('tinyTimberLastBackupDate');
+
+            await replaceFirestoreProducts(DEFAULT_PRODUCTS);
+
+            alert('Demo data reset! Refreshing dashboard...');
+            window.location.reload();
         }
     </script>
 </body>
