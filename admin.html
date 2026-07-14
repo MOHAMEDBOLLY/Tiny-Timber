@@ -884,16 +884,25 @@
                             </div>
                         </div>
                         <div class="form-group">
-                            <label class="form-label">Cost</label>
-                            <input type="number" id="designCost" placeholder="35" step="0.5">
+                            <label class="form-label">Materials</label>
+                            <div id="productMaterialsList"></div>
+                            <button class="btn-sm-secondary" style="width: 100%; margin-top: 8px;" onclick="toggleMaterialPicker()">+ Add Material</button>
+                            <select id="materialPicker" style="display: none; margin-top: 8px;" onchange="onMaterialPicked()">
+                                <option value="">Select a material…</option>
+                                <option value="__new__">+ New Material</option>
+                            </select>
                         </div>
                         <div class="form-group">
                             <label class="form-label">Selling Price</label>
-                            <input type="number" id="designPrice" placeholder="120" step="1">
+                            <input type="number" id="designPrice" placeholder="120" step="1" oninput="updateProductCostProfitDisplay()">
                         </div>
                         <div class="form-group">
                             <label class="form-label">Quantity</label>
                             <input type="number" id="designQty" placeholder="5" step="1">
+                        </div>
+                        <div class="form-group">
+                            <div class="card-detail">Material Cost: <strong id="productMaterialCostDisplay">0</strong> EGP</div>
+                            <div class="card-detail">Profit: <strong id="productProfitDisplay" style="color: var(--accent);">0</strong> EGP</div>
                         </div>
                         <div class="form-group">
                             <label class="form-label">Upload Photo</label>
@@ -901,6 +910,32 @@
                             <div id="imagePreview" style="margin-top: 12px;"></div>
                         </div>
                         <button class="btn" onclick="addDesign()">Save Design</button>
+                    </div>
+                </div>
+
+                <!-- Small inline dialog for creating a material without leaving the product form -->
+                <div id="newMaterialModal" style="display: none; position: fixed; inset: 0; z-index: 500; align-items: center; justify-content: center; background: rgba(0,0,0,0.4);">
+                    <div class="card" style="width: 90%; max-width: 360px;">
+                        <div class="form-group">
+                            <label class="form-label">Material Name</label>
+                            <input type="text" id="newMaterialName" placeholder="e.g., Wood">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Cost (per unit)</label>
+                            <input type="number" id="newMaterialCost" placeholder="5" step="0.5">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Unit</label>
+                            <input type="text" id="newMaterialUnit" placeholder="e.g., piece, ml, roll">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Current Stock</label>
+                            <input type="number" id="newMaterialStock" placeholder="15" step="1">
+                        </div>
+                        <div style="display: flex; gap: 8px;">
+                            <button class="btn-sm-secondary" style="flex: 1;" onclick="closeNewMaterialModal()">Cancel</button>
+                            <button class="btn" style="flex: 1;" onclick="saveNewMaterialFromProductForm()">Save</button>
+                        </div>
                     </div>
                 </div>
 
@@ -1348,8 +1383,8 @@
         async function createMaterial(material) {
             if (firestoreEnabled) {
                 try {
-                    await firestoreDb.collection(MATERIALS_COLLECTION).add(material);
-                    return; // onSnapshot will update appData.materials and re-render
+                    const ref = await firestoreDb.collection(MATERIALS_COLLECTION).add(material);
+                    return ref; // onSnapshot will update appData.materials and re-render; callers may also use ref.id immediately
                 } catch (err) {
                     console.error('Firestore create material failed:', err);
                 }
@@ -1590,13 +1625,134 @@
 
         function toggleAddDesign() {
             const form = document.getElementById('addDesignForm');
-            form.style.display = form.style.display === 'none' ? 'block' : 'none';
+            const opening = form.style.display === 'none';
+            if (opening) {
+                currentProductMaterials = [];
+                renderProductMaterialsList();
+                updateProductCostProfitDisplay();
+                document.getElementById('materialPicker').style.display = 'none';
+            }
+            form.style.display = opening ? 'block' : 'none';
         }
 
         function setDesignSize(el, size) {
             document.querySelectorAll('#addDesignForm .option-group .option-btn').forEach(b => b.classList.remove('selected'));
             el.classList.add('selected');
             designSize = size;
+        }
+
+        // Product Materials (assigned to the design currently being created)
+        let currentProductMaterials = [];
+
+        function toggleMaterialPicker() {
+            const picker = document.getElementById('materialPicker');
+            const opening = picker.style.display === 'none';
+            if (opening) {
+                const options = appData.materials
+                    .filter(m => !currentProductMaterials.some(cm => cm.materialId === m.firestoreId))
+                    .map(m => `<option value="${m.firestoreId}">${m.name}</option>`)
+                    .join('');
+                picker.innerHTML = '<option value="">Select a material…</option>' + options + '<option value="__new__">+ New Material</option>';
+            }
+            picker.style.display = opening ? 'block' : 'none';
+        }
+
+        function onMaterialPicked() {
+            const picker = document.getElementById('materialPicker');
+            const value = picker.value;
+            if (!value) return;
+
+            if (value === '__new__') {
+                picker.value = '';
+                openNewMaterialModal();
+                return;
+            }
+
+            currentProductMaterials.push({ materialId: value, quantity: 1 });
+            renderProductMaterialsList();
+            updateProductCostProfitDisplay();
+            picker.style.display = 'none';
+        }
+
+        function openNewMaterialModal() {
+            document.getElementById('newMaterialName').value = '';
+            document.getElementById('newMaterialCost').value = '';
+            document.getElementById('newMaterialUnit').value = '';
+            document.getElementById('newMaterialStock').value = '';
+            document.getElementById('newMaterialModal').style.display = 'flex';
+        }
+
+        function closeNewMaterialModal() {
+            document.getElementById('newMaterialModal').style.display = 'none';
+        }
+
+        async function saveNewMaterialFromProductForm() {
+            const name = document.getElementById('newMaterialName').value.trim();
+            const cost = parseFloat(document.getElementById('newMaterialCost').value);
+            const unit = document.getElementById('newMaterialUnit').value.trim();
+            const stock = parseFloat(document.getElementById('newMaterialStock').value);
+
+            if (!name || isNaN(cost) || !unit || isNaN(stock)) {
+                alert('Please fill all fields');
+                return;
+            }
+
+            const ref = await createMaterial({ name, cost, unit, stock });
+            closeNewMaterialModal();
+
+            if (ref && ref.id) {
+                // Select it immediately without waiting for the realtime listener,
+                // so the product form's cost/profit reflect it right away.
+                appData.materials.push({ firestoreId: ref.id, name, cost, unit, stock });
+                currentProductMaterials.push({ materialId: ref.id, quantity: 1 });
+                renderProductMaterialsList();
+                updateProductCostProfitDisplay();
+            }
+        }
+
+        function renderProductMaterialsList() {
+            const list = document.getElementById('productMaterialsList');
+            if (currentProductMaterials.length === 0) {
+                list.innerHTML = '<div class="card-detail">No materials assigned</div>';
+                return;
+            }
+            list.innerHTML = currentProductMaterials.map((cm, i) => {
+                const material = appData.materials.find(m => m.firestoreId === cm.materialId);
+                const name = material ? material.name : 'Unknown material';
+                return `
+                    <div class="card-detail" style="display: flex; align-items: center; gap: 8px; margin-top: 6px;">
+                        <span style="flex: 1;">${name}</span>
+                        <input type="number" value="${cm.quantity}" min="1" step="1" style="width: 60px;" onchange="updateProductMaterialQuantity(${i}, this.value)">
+                        <button class="btn-sm-secondary" onclick="removeProductMaterial(${i})">Remove</button>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function updateProductMaterialQuantity(idx, value) {
+            const qty = parseInt(value);
+            currentProductMaterials[idx].quantity = isNaN(qty) || qty < 1 ? 1 : qty;
+            updateProductCostProfitDisplay();
+        }
+
+        function removeProductMaterial(idx) {
+            currentProductMaterials.splice(idx, 1);
+            renderProductMaterialsList();
+            updateProductCostProfitDisplay();
+        }
+
+        function calculateProductMaterialCost() {
+            return currentProductMaterials.reduce((sum, cm) => {
+                const material = appData.materials.find(m => m.firestoreId === cm.materialId);
+                return sum + (material ? material.cost * cm.quantity : 0);
+            }, 0);
+        }
+
+        function updateProductCostProfitDisplay() {
+            const materialCost = calculateProductMaterialCost();
+            const price = parseFloat(document.getElementById('designPrice').value) || 0;
+            document.getElementById('productMaterialCostDisplay').textContent = Math.round(materialCost * 100) / 100;
+            document.getElementById('productProfitDisplay').textContent = Math.round((price - materialCost) * 100) / 100;
         }
 
         let designImageBase64 = null;
@@ -1650,11 +1806,11 @@
         async function addDesign() {
             const name = document.getElementById('designName').value.trim();
             const category = document.getElementById('designCategory').value;
-            const cost = parseFloat(document.getElementById('designCost').value);
+            const cost = calculateProductMaterialCost();
             const price = parseFloat(document.getElementById('designPrice').value);
             const qty = parseInt(document.getElementById('designQty').value);
 
-            if (!name || !cost || !price || !qty) {
+            if (!name || !price || !qty) {
                 alert('Please fill all fields');
                 return;
             }
@@ -1687,6 +1843,7 @@
                 size: designSize,
                 price,
                 cost,
+                materials: currentProductMaterials.slice(),
                 quantity: qty,
                 type: 'ready'
             };
@@ -1694,13 +1851,13 @@
             await createProduct(newProduct);
 
             document.getElementById('designName').value = '';
-            document.getElementById('designCost').value = '';
             document.getElementById('designPrice').value = '';
             document.getElementById('designQty').value = '';
             document.getElementById('designImage').value = '';
             document.getElementById('imagePreview').innerHTML = '';
             designImageBase64 = null;
             designThumbnailBase64 = null;
+            currentProductMaterials = [];
             toggleAddDesign();
             alert('Design added! ');
         }
