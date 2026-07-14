@@ -956,6 +956,30 @@
         <div class="screen" id="materialsScreen">
             <div class="content">
                 <div class="section-title">Materials</div>
+                <button class="btn" style="width: 100%; margin-bottom: 16px;" onclick="toggleAddMaterial()">+ Add Material</button>
+
+                <div id="addMaterialForm" style="display: none;">
+                    <div class="card">
+                        <div class="form-group">
+                            <label class="form-label">Material Name</label>
+                            <input type="text" id="materialName" placeholder="e.g., Small wooden pieces">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Cost (per unit)</label>
+                            <input type="number" id="materialCost" placeholder="5" step="0.5">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Unit</label>
+                            <input type="text" id="materialUnit" placeholder="e.g., piece, ml, roll">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Current Stock</label>
+                            <input type="number" id="materialStock" placeholder="15" step="1">
+                        </div>
+                        <button class="btn" onclick="saveMaterial()">Save Material</button>
+                    </div>
+                </div>
+
                 <div id="materialsList"></div>
             </div>
         </div>
@@ -1140,14 +1164,9 @@
                 { id: 6, name: 'Flower', category: 'Soft & Floral', image: 'images/products/flower.jpg', size: 'small', price: 120, cost: 35, quantity: 2, type: 'ready' }
             ],
             orders: [],
+            gallery: [],
             boothSales: [],
-            materials: {
-                'Small wooden pieces': 15,
-                'Large wooden pieces': 10,
-                'Key rings': 50,
-                'Packaging': 80,
-                'Paint colors': 20
-            },
+            materials: [],
             costs: {
                 woodSmall: 5,
                 woodLarge: 8,
@@ -1170,12 +1189,6 @@
             const boothSales = localStorage.getItem('handmadeBoothSales');
             if (boothSales) {
                 appData.boothSales = JSON.parse(boothSales);
-            }
-            const materials = localStorage.getItem('handmadeMaterials');
-            if (materials) {
-                appData.materials = JSON.parse(materials);
-            } else {
-                localStorage.setItem('handmadeMaterials', JSON.stringify(appData.materials));
             }
         }
 
@@ -1201,11 +1214,15 @@
         const PRODUCTS_COLLECTION = 'products';
         const PRODUCTS_MIGRATION_FLAG = 'tinyTimberProductsMigrated';
         const ORDERS_COLLECTION = 'orders';
+        const GALLERY_COLLECTION = 'gallery';
+        const MATERIALS_COLLECTION = 'materials';
 
         let firestoreDb = null;
         let firestoreEnabled = false;
         let productsUnsubscribe = null;
         let ordersUnsubscribe = null;
+        let galleryUnsubscribe = null;
+        let materialsUnsubscribe = null;
 
         try {
             firebase.initializeApp(firebaseConfig);
@@ -1295,6 +1312,71 @@
             }
             order.status = status;
             renderOrders();
+        }
+
+        function initGallerySync() {
+            if (!firestoreEnabled) return;
+
+            galleryUnsubscribe = firestoreDb.collection(GALLERY_COLLECTION).onSnapshot((snapshot) => {
+                const photos = [];
+                snapshot.forEach(doc => {
+                    photos.push({ ...doc.data(), firestoreId: doc.id });
+                });
+                appData.gallery = photos;
+                renderGalleryPhotos();
+            }, (error) => {
+                console.error('Firestore gallery listener error:', error);
+            });
+        }
+
+        function initMaterialsSync() {
+            if (!firestoreEnabled) return;
+
+            materialsUnsubscribe = firestoreDb.collection(MATERIALS_COLLECTION).onSnapshot((snapshot) => {
+                const materials = [];
+                snapshot.forEach(doc => {
+                    materials.push({ ...doc.data(), firestoreId: doc.id });
+                });
+                appData.materials = materials;
+                renderMaterials();
+                updateHome();
+            }, (error) => {
+                console.error('Firestore materials listener error:', error);
+            });
+        }
+
+        async function createMaterial(material) {
+            if (firestoreEnabled) {
+                try {
+                    await firestoreDb.collection(MATERIALS_COLLECTION).add(material);
+                    return; // onSnapshot will update appData.materials and re-render
+                } catch (err) {
+                    console.error('Firestore create material failed:', err);
+                }
+            }
+        }
+
+        async function updateMaterial(firestoreId, updates) {
+            if (firestoreEnabled && firestoreId) {
+                try {
+                    await firestoreDb.collection(MATERIALS_COLLECTION).doc(firestoreId).update(updates);
+                    return; // onSnapshot will update appData.materials and re-render
+                } catch (err) {
+                    console.error('Firestore update material failed:', err);
+                }
+            }
+        }
+
+        async function deleteMaterial(idx) {
+            const material = appData.materials[idx];
+            if (!confirm(`Remove "${material.name}"?`)) return;
+            if (firestoreEnabled && material.firestoreId) {
+                try {
+                    await firestoreDb.collection(MATERIALS_COLLECTION).doc(material.firestoreId).delete();
+                } catch (err) {
+                    console.error('Firestore delete material failed:', err);
+                }
+            }
         }
 
         async function createProduct(product) {
@@ -1392,6 +1474,8 @@
             updateLastBackupDisplay();
             initProductsSync();
             initOrdersSync();
+            initGallerySync();
+            initMaterialsSync();
             if (window.lucide) { lucide.createIcons(); }
         });
 
@@ -1424,10 +1508,13 @@
         function updateHome() {
             const today = new Date().toDateString();
             const todayBoothSales = appData.boothSales.filter(s => new Date(s.date).toDateString() === today);
-            const todayOrders = appData.orders.filter(o => new Date(o.date).toDateString() === today);
+            // order.date is a locale-formatted display string (not reliably re-parseable by
+            // new Date()); order.createdAt is a Firestore server timestamp, always well-formed.
+            const todayOrders = appData.orders.filter(o => o.createdAt && new Date(o.createdAt.seconds * 1000).toDateString() === today);
 
-            const sold = todayBoothSales.length;
-            const revenue = todayBoothSales.reduce((s, o) => s + o.price, 0);
+            const sold = todayBoothSales.length + todayOrders.length;
+            const revenue = todayBoothSales.reduce((s, o) => s + o.price, 0) + todayOrders.reduce((s, o) => s + (o.total || 0), 0);
+            // Cost data only exists for booth sales; online order items don't carry a cost field.
             const cost = todayBoothSales.reduce((s, o) => s + o.cost, 0);
             const profit = revenue - cost;
 
@@ -1666,17 +1753,76 @@
 
         function renderMaterials() {
             const list = document.getElementById('materialsList');
-            list.innerHTML = Object.entries(appData.materials).map(([name, qty]) => `
+
+            if (appData.materials.length === 0) {
+                list.innerHTML = '<div class="empty-state"><svg class="empty-emoji" data-lucide="package"></svg><p>No materials yet</p></div>';
+                if (window.lucide) { lucide.createIcons(); }
+                return;
+            }
+
+            list.innerHTML = appData.materials.map((m, i) => `
                 <div class="card">
                     <div style="display: flex; justify-content: space-between; align-items: center;">
                         <div>
-                            <div class="card-title">${name}</div>
+                            <div class="card-title">${m.name}</div>
+                            <div class="card-detail">${m.cost} EGP / ${m.unit}</div>
                         </div>
-                        <div style="font-size: 20px; font-weight: 700; color: var(--primary);">${qty}</div>
+                        <div style="font-size: 20px; font-weight: 700; color: var(--primary);">${m.stock}</div>
                     </div>
-                    ${qty < 10 ? '<div class="card-detail" style="color: var(--primary); margin-top: 8px;">Low stock</div>' : ''}
+                    ${m.stock < 10 ? '<div class="card-detail" style="color: var(--primary); margin-top: 8px;">Low stock</div>' : ''}
+                    <div style="display: flex; gap: 8px; margin-top: 8px;">
+                        <button class="btn-sm-secondary" style="flex: 1;" onclick="editMaterial(${i})">Edit</button>
+                        <button class="btn-sm-secondary" style="flex: 1;" onclick="deleteMaterial(${i})">Delete</button>
+                    </div>
                 </div>
             `).join('');
+        }
+
+        let editingMaterialId = null;
+
+        function toggleAddMaterial() {
+            const form = document.getElementById('addMaterialForm');
+            const opening = form.style.display === 'none';
+            if (opening) {
+                editingMaterialId = null;
+                document.getElementById('materialName').value = '';
+                document.getElementById('materialCost').value = '';
+                document.getElementById('materialUnit').value = '';
+                document.getElementById('materialStock').value = '';
+            }
+            form.style.display = opening ? 'block' : 'none';
+        }
+
+        function editMaterial(idx) {
+            const m = appData.materials[idx];
+            editingMaterialId = m.firestoreId;
+            document.getElementById('materialName').value = m.name;
+            document.getElementById('materialCost').value = m.cost;
+            document.getElementById('materialUnit').value = m.unit;
+            document.getElementById('materialStock').value = m.stock;
+            document.getElementById('addMaterialForm').style.display = 'block';
+        }
+
+        async function saveMaterial() {
+            const name = document.getElementById('materialName').value.trim();
+            const cost = parseFloat(document.getElementById('materialCost').value);
+            const unit = document.getElementById('materialUnit').value.trim();
+            const stock = parseFloat(document.getElementById('materialStock').value);
+
+            if (!name || isNaN(cost) || !unit || isNaN(stock)) {
+                alert('Please fill all fields');
+                return;
+            }
+
+            const material = { name, cost, unit, stock };
+
+            if (editingMaterialId) {
+                await updateMaterial(editingMaterialId, material);
+            } else {
+                await createMaterial(material);
+            }
+
+            toggleAddMaterial();
         }
 
         let galleryImageBase64 = null;
@@ -1699,41 +1845,52 @@
             }
         }
 
-        function addGalleryPhoto() {
+        async function addGalleryPhoto() {
             if (!galleryImageBase64) {
                 alert('Please select an image');
                 return;
             }
 
-            const gallery = JSON.parse(localStorage.getItem('handmadeGallery') || '[]');
-            gallery.push({
-                id: Date.now(),
-                image: galleryImageBase64,
-                caption: document.getElementById('galleryCaption').value.trim() || 'Customer Design'
-            });
+            const caption = document.getElementById('galleryCaption').value.trim() || 'Customer Design';
+            let image = galleryImageBase64;
 
-            localStorage.setItem('handmadeGallery', JSON.stringify(gallery));
+            try {
+                const result = await uploadToCloudinary(galleryImageBase64);
+                image = result.secure_url;
+            } catch (err) {
+                console.error('Cloudinary upload error:', err);
+                alert('Upload failed.\nUsing local image.');
+                // image already holds the Base64 fallback; photo is not lost.
+            }
+
+            if (firestoreEnabled) {
+                try {
+                    await firestoreDb.collection(GALLERY_COLLECTION).add({ image, caption, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
+                } catch (err) {
+                    console.error('Firestore add gallery photo failed:', err);
+                    alert('Could not save photo. Please try again.');
+                    return;
+                }
+            }
 
             document.getElementById('galleryImage').value = '';
             document.getElementById('galleryCaption').value = '';
             document.getElementById('galleryImagePreview').innerHTML = '';
             galleryImageBase64 = null;
             toggleAddGallery();
-            renderGalleryPhotos();
             alert('Added to gallery!');
         }
 
         function renderGalleryPhotos() {
             const list = document.getElementById('galleryPhotosList');
-            const gallery = JSON.parse(localStorage.getItem('handmadeGallery') || '[]');
 
-            if (gallery.length === 0) {
+            if (appData.gallery.length === 0) {
                 list.innerHTML = '<div class="empty-state"><svg class="empty-emoji" data-lucide="images"></svg><p>No gallery photos yet</p></div>';
                 if (window.lucide) { lucide.createIcons(); }
                 return;
             }
 
-            list.innerHTML = gallery.map((photo, i) => `
+            list.innerHTML = appData.gallery.map((photo, i) => `
                 <div class="card">
                     <img src="${photo.image}" loading="lazy" style="width: 100%; height: 150px; object-fit: cover; border-radius: 8px; margin-bottom: 12px;">
                     <div class="card-detail">${photo.caption}</div>
@@ -1742,11 +1899,18 @@
             `).join('');
         }
 
-        function deleteGalleryPhoto(idx) {
+        async function deleteGalleryPhoto(idx) {
             if (confirm('Remove this photo?')) {
-                const gallery = JSON.parse(localStorage.getItem('handmadeGallery') || '[]');
-                gallery.splice(idx, 1);
-                localStorage.setItem('handmadeGallery', JSON.stringify(gallery));
+                const photo = appData.gallery[idx];
+                if (firestoreEnabled && photo && photo.firestoreId) {
+                    try {
+                        await firestoreDb.collection(GALLERY_COLLECTION).doc(photo.firestoreId).delete();
+                        return; // onSnapshot will update appData.gallery and re-render
+                    } catch (err) {
+                        console.error('Firestore delete gallery photo failed:', err);
+                    }
+                }
+                appData.gallery.splice(idx, 1);
                 renderGalleryPhotos();
             }
         }

@@ -70,7 +70,7 @@
         .container {
             max-width: 600px;
             margin: 0 auto;
-            padding-bottom: 80px;
+            padding-bottom: 104px;
         }
 
         /* Header */
@@ -133,7 +133,7 @@
             height: 20px;
         }
 
-        /* Fixed footer stack: CTA + navigation. No overflow/height constraints
+        /* Fixed footer stack: navigation + CTA. No overflow/height constraints
            on this wrapper so nothing inside it can ever get clipped. */
         .app-footer {
             position: fixed;
@@ -141,45 +141,32 @@
             left: 0;
             right: 0;
             z-index: 100;
+            background: var(--card);
+            border-top: 1px solid var(--border);
         }
 
-        /* Premium floating glass pill: fits its content, centered, ~10px above nav. */
+        /* Subtle single-line CTA, sits below the nav. */
         .footer-cta {
-            width: fit-content;
-            max-width: calc(100% - 32px);
-            margin: 0 auto 10px;
             display: flex;
             align-items: center;
             justify-content: center;
             gap: 6px;
-            padding: 6px 14px;
-            border-radius: 999px;
-            font-size: 12px;
-            font-weight: 600;
+            padding: 4px 0 8px;
+            font-size: 11px;
+            font-weight: 500;
             white-space: nowrap;
-            color: var(--primary);
-            background: rgba(255, 255, 255, 0.35);
-            border: 1px solid rgba(255, 255, 255, 0.45);
-            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
-        }
-
-        :root[data-theme="dark"] .footer-cta {
-            background: rgba(255, 255, 255, 0.08);
-            border-color: rgba(255, 255, 255, 0.12);
-            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+            color: var(--text-light);
         }
 
         .footer-cta-icon {
             display: inline-flex;
-            color: var(--primary);
+            color: var(--text-light);
             transition: color 0.3s;
         }
 
         .footer-cta-icon svg {
-            width: 16px;
-            height: 16px;
+            width: 14px;
+            height: 14px;
         }
 
         .footer-cta-icon:hover {
@@ -189,8 +176,6 @@
         /* Navigation */
         nav {
             display: flex;
-            background: var(--card);
-            border-top: 1px solid var(--border);
         }
 
         .nav-item {
@@ -790,6 +775,10 @@
                 </div>
 
                 <div id="bagCheckout"></div>
+
+                <div style="text-align: center; margin-top: 16px;">
+                    <button style="background: none; border: none; color: var(--text-light); font-size: 12px; cursor: pointer; text-decoration: underline;" onclick="switchScreen('history')">Track an existing order</button>
+                </div>
             </div>
         </div>
 
@@ -800,15 +789,30 @@
                 <div class="gallery-grid" id="galleryGrid"></div>
             </div>
         </div>
+
+        <!-- Order History Screen -->
+        <div class="screen" id="historyScreen">
+            <div class="content">
+                <div class="section-title">Order History</div>
+
+                <div class="form-group">
+                    <label class="form-label">Phone Number</label>
+                    <input type="text" id="historyPhone" placeholder="+20 XXX XXX XXXX">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Order ID</label>
+                    <input type="text" id="historyOrderId" placeholder="e.g. TTX7K2P9">
+                </div>
+
+                <button class="btn" onclick="searchOrderHistory()">Search</button>
+
+                <div id="historyResults" style="margin-top: 16px;"></div>
+            </div>
+        </div>
     </div>
 
     <div class="app-footer">
-        <div class="footer-cta">
-            <span>Love this app? Build yours</span>
-            <a href="https://wa.me/201555663368" target="_blank" rel="noopener" class="footer-cta-icon" aria-label="Chat on WhatsApp">
-                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12.017 2C6.503 2 2.032 6.472 2.032 11.985c0 1.76.46 3.478 1.336 4.988L2 22l5.29-1.389c1.462.797 3.108 1.213 4.775 1.213h.004c5.514 0 9.985-4.472 9.985-9.985 0-2.666-1.037-5.17-2.923-7.056C17.245 3.033 14.74 2 12.017 2zm0 18.271h-.004c-1.487 0-2.944-.397-4.203-1.15l-.301-.179-3.135.823.837-3.058-.196-.313c-.83-1.319-1.269-2.845-1.269-4.409 0-4.564 3.712-8.276 8.275-8.276 2.211 0 4.286.86 5.85 2.427 1.564 1.564 2.425 3.639 2.421 5.849 0 4.564-3.712 8.276-8.275 8.276z"/></svg>
-            </a>
-        </div>
         <nav>
             <button class="nav-item active" onclick="switchScreen('home')">
                 <svg data-lucide="home"></svg>
@@ -827,6 +831,12 @@
                 Bag
             </button>
         </nav>
+        <div class="footer-cta">
+            <span>Love this app? Build yours</span>
+            <a href="https://wa.me/201555663368" target="_blank" rel="noopener" class="footer-cta-icon" aria-label="Chat on WhatsApp">
+                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12.017 2C6.503 2 2.032 6.472 2.032 11.985c0 1.76.46 3.478 1.336 4.988L2 22l5.29-1.389c1.462.797 3.108 1.213 4.775 1.213h.004c5.514 0 9.985-4.472 9.985-9.985 0-2.666-1.037-5.17-2.923-7.056C17.245 3.033 14.74 2 12.017 2zm0 18.271h-.004c-1.487 0-2.944-.397-4.203-1.15l-.301-.179-3.135.823.837-3.058-.196-.313c-.83-1.319-1.269-2.845-1.269-4.409 0-4.564 3.712-8.276 8.275-8.276 2.211 0 4.286.86 5.85 2.427 1.564 1.564 2.425 3.639 2.421 5.849 0 4.564-3.712 8.276-8.275 8.276z"/></svg>
+            </a>
+        </div>
     </div>
 
     <script>
@@ -834,6 +844,7 @@
             products: [],
             cart: [],
             customDesigns: [],
+            gallery: [],
             categories: ['All', 'Positive Vibes', 'Cute Friends', 'Soft & Floral'],
             paintColors: [
                 { name: 'Cream', hex: '#FFF8F0' },
@@ -901,6 +912,7 @@
 
         const PRODUCTS_COLLECTION = 'products';
         const ORDERS_COLLECTION = 'orders';
+        const GALLERY_COLLECTION = 'gallery';
 
         let firestoreDb = null;
         let firestoreEnabled = false;
@@ -926,6 +938,21 @@
                 renderProducts();
             }, (error) => {
                 console.error('Firestore products listener error:', error);
+            });
+        }
+
+        function initGallerySync() {
+            if (!firestoreEnabled) return;
+
+            firestoreDb.collection(GALLERY_COLLECTION).onSnapshot((snapshot) => {
+                const photos = [];
+                snapshot.forEach(doc => {
+                    photos.push({ ...doc.data(), firestoreId: doc.id });
+                });
+                appData.gallery = photos;
+                renderGallery();
+            }, (error) => {
+                console.error('Firestore gallery listener error:', error);
             });
         }
 
@@ -955,6 +982,10 @@
             renderBag();
             renderStudio();
             initProductsSync();
+            initGallerySync();
+            let savedScreen = null;
+            try { savedScreen = sessionStorage.getItem('tinyTimberCurrentScreen'); } catch (e) { /* ignore storage errors */ }
+            switchScreen(['home', 'studio', 'gallery', 'bag', 'history'].includes(savedScreen) ? savedScreen : 'home');
             if (window.lucide) { lucide.createIcons(); }
         });
 
@@ -967,13 +998,16 @@
                 'home': 'homeScreen',
                 'studio': 'studioScreen',
                 'gallery': 'galleryScreen',
-                'bag': 'bagScreen'
+                'bag': 'bagScreen',
+                'history': 'historyScreen'
             };
 
             if (screenMap[screen]) {
                 document.getElementById(screenMap[screen]).classList.add('active');
-                event.target.classList.add('active');
+                const navBtn = document.querySelector(`.nav-item[onclick="switchScreen('${screen}')"]`);
+                if (navBtn) navBtn.classList.add('active');
                 currentScreen = screen;
+                try { sessionStorage.setItem('tinyTimberCurrentScreen', screen); } catch (e) { /* ignore storage errors */ }
                 window.scrollTo(0, 0);
             }
         }
@@ -1314,6 +1348,10 @@
             deliveryType = type;
         }
 
+        function generateOrderId() {
+            return 'TT' + Date.now().toString(36).toUpperCase() + Math.random().toString(36).slice(2, 5).toUpperCase();
+        }
+
         async function submitOrder() {
             const name = document.getElementById('orderName').value.trim();
             const phone = document.getElementById('orderPhone').value.trim();
@@ -1324,7 +1362,9 @@
                 return;
             }
 
+            const orderId = generateOrderId();
             const order = {
+                orderId,
                 name, phone, address, deliveryType,
                 notes: document.getElementById('orderNotes').value.trim(),
                 items: appData.cart,
@@ -1351,14 +1391,14 @@
             saveData();
             renderBag();
 
-            alert(`Order sent! We'll contact you at ${phone}`);
+            alert(`Order sent! We'll contact you at ${phone}\n\nYour Order ID: ${orderId}\nSave it to track your order under "Track an existing order" in My Bag.`);
             switchScreen('home');
         }
 
         // Gallery
         function renderGallery() {
             const grid = document.getElementById('galleryGrid');
-            const designs = JSON.parse(localStorage.getItem('handmadeGallery') || '[]');
+            const designs = appData.gallery;
 
             if (designs.length === 0) {
                 grid.innerHTML = '<div class="empty-state" style="grid-column: 1/-1;"><svg class="empty-emoji" data-lucide="images"></svg><p>Custom designs coming soon!</p></div>';
@@ -1369,6 +1409,70 @@
             grid.innerHTML = designs.map(d => `
                 <div class="gallery-card" style="background: none; padding: 0;">
                     <img src="${d.image}" alt="${d.caption || 'Customer design'}" loading="lazy" style="width: 100%; height: 100%; object-fit: cover; border-radius: 12px;">
+                </div>
+            `).join('');
+        }
+
+        // Order History
+        let historyUnsubscribe = null;
+
+        function searchOrderHistory() {
+            const phone = document.getElementById('historyPhone').value.trim();
+            const orderId = document.getElementById('historyOrderId').value.trim();
+            const results = document.getElementById('historyResults');
+
+            if (historyUnsubscribe) {
+                historyUnsubscribe();
+                historyUnsubscribe = null;
+            }
+
+            if (!phone || !orderId) {
+                results.innerHTML = '<div class="empty-state"><svg class="empty-emoji" data-lucide="search"></svg><p>Enter both phone number and Order ID.</p></div>';
+                if (window.lucide) { lucide.createIcons(); }
+                return;
+            }
+
+            if (!firestoreEnabled) {
+                results.innerHTML = '<div class="empty-state"><svg class="empty-emoji" data-lucide="wifi-off"></svg><p>Could not connect. Please try again.</p></div>';
+                if (window.lucide) { lucide.createIcons(); }
+                return;
+            }
+
+            // Realtime listener: if Admin changes this order's status while the
+            // customer is viewing it, the update arrives here immediately.
+            historyUnsubscribe = firestoreDb.collection(ORDERS_COLLECTION)
+                .where('phone', '==', phone)
+                .where('orderId', '==', orderId)
+                .onSnapshot((snapshot) => {
+                    renderHistoryResults(snapshot);
+                }, (error) => {
+                    console.error('Firestore order history listener error:', error);
+                    results.innerHTML = '<div class="empty-state"><p>Something went wrong. Please try again.</p></div>';
+                });
+        }
+
+        function renderHistoryResults(snapshot) {
+            const results = document.getElementById('historyResults');
+
+            if (snapshot.empty) {
+                results.innerHTML = '<div class="empty-state"><svg class="empty-emoji" data-lucide="package-search"></svg><p>No matching orders found.</p></div>';
+                if (window.lucide) { lucide.createIcons(); }
+                return;
+            }
+
+            const orders = [];
+            snapshot.forEach(doc => orders.push({ ...doc.data(), firestoreId: doc.id }));
+            orders.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+
+            const statusLabel = { new: 'New', painting: 'Painting', ready: 'Ready', delivered: 'Delivered' };
+
+            results.innerHTML = orders.map(o => `
+                <div class="bag-item" style="flex-direction: column; align-items: stretch; gap: 4px;">
+                    <div class="bag-item-name">Order ${o.orderId}</div>
+                    <div class="bag-item-details">${o.date}</div>
+                    <div class="bag-item-details">${(o.items || []).map(i => i.text || i.name).join(', ')}</div>
+                    <div class="bag-item-price">${o.total} EGP</div>
+                    <div class="bag-item-details">Status: ${statusLabel[o.status] || o.status}</div>
                 </div>
             `).join('');
         }
