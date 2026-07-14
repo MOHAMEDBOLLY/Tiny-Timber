@@ -1,7 +1,7 @@
 // Tiny Timber Production PWA Service Worker
 // Cache-first for static assets, network-first for Firestore, offline fallback to shop.html.
 
-const CACHE_VERSION = 'v2';
+const CACHE_VERSION = 'v4';
 const STATIC_CACHE = `tiny-timber-static-${CACHE_VERSION}`;
 const RUNTIME_CACHE = `tiny-timber-runtime-${CACHE_VERSION}`;
 const OFFLINE_FALLBACK_URL = 'shop.html';
@@ -31,7 +31,9 @@ self.addEventListener('install', (event) => {
         caches.open(STATIC_CACHE)
             .then((cache) => Promise.all(
                 PRECACHE_URLS.map((url) =>
-                    cache.add(url).catch((err) => {
+                    // cache:'reload' bypasses the browser HTTP cache so a fresh copy is
+                    // fetched from the network at install time, never a stale cached one.
+                    cache.add(new Request(url, { cache: 'reload' })).catch((err) => {
                         console.warn('[SW] Precache failed for', url, err);
                     })
                 )
@@ -110,7 +112,7 @@ self.addEventListener('fetch', (event) => {
     if (request.mode === 'navigate') {
         event.respondWith((async () => {
             try {
-                const response = await fetch(request.url, { credentials: 'same-origin' });
+                const response = await fetch(request.url, { credentials: 'same-origin', cache: 'no-store' });
                 const cache = await caches.open(RUNTIME_CACHE);
                 cache.put(request, response.clone());
                 return response;

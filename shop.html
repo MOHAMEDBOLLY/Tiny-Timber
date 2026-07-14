@@ -10,11 +10,13 @@
     <meta name="theme-color" content="#8B5A2B">
     <link rel="manifest" href="manifest.webmanifest">
     <link rel="apple-touch-icon" href="images/icons/apple-touch-icon.png">
-    <title>Little Handmade - Painted Keychains</title>
+    <title>Tiny Timber</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
     <script src="pwa.js" defer></script>
     <style>
         * {
@@ -131,16 +133,64 @@
             height: 20px;
         }
 
-        /* Navigation */
-        nav {
-            display: flex;
+        /* Fixed footer stack: CTA + navigation. No overflow/height constraints
+           on this wrapper so nothing inside it can ever get clipped. */
+        .app-footer {
             position: fixed;
             bottom: 0;
             left: 0;
             right: 0;
+            z-index: 100;
+        }
+
+        /* Premium floating glass pill: fits its content, centered, ~10px above nav. */
+        .footer-cta {
+            width: fit-content;
+            max-width: calc(100% - 32px);
+            margin: 0 auto 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            padding: 6px 14px;
+            border-radius: 999px;
+            font-size: 12px;
+            font-weight: 600;
+            white-space: nowrap;
+            color: var(--primary);
+            background: rgba(255, 255, 255, 0.35);
+            border: 1px solid rgba(255, 255, 255, 0.45);
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+        }
+
+        :root[data-theme="dark"] .footer-cta {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: rgba(255, 255, 255, 0.12);
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+        }
+
+        .footer-cta-icon {
+            display: inline-flex;
+            color: var(--primary);
+            transition: color 0.3s;
+        }
+
+        .footer-cta-icon svg {
+            width: 16px;
+            height: 16px;
+        }
+
+        .footer-cta-icon:hover {
+            color: var(--accent);
+        }
+
+        /* Navigation */
+        nav {
+            display: flex;
             background: var(--card);
             border-top: 1px solid var(--border);
-            z-index: 100;
         }
 
         .nav-item {
@@ -752,35 +802,36 @@
         </div>
     </div>
 
-    <nav>
-        <button class="nav-item active" onclick="switchScreen('home')">
-            <svg data-lucide="home"></svg>
-            Shop
-        </button>
-        <button class="nav-item" onclick="switchScreen('studio')">
-            <svg data-lucide="palette"></svg>
-            Custom
-        </button>
-        <button class="nav-item" onclick="switchScreen('gallery')">
-            <svg data-lucide="images"></svg>
-            Gallery
-        </button>
-        <button class="nav-item" onclick="switchScreen('bag')">
-            <svg data-lucide="shopping-bag"></svg>
-            Bag
-        </button>
-    </nav>
+    <div class="app-footer">
+        <div class="footer-cta">
+            <span>Love this app? Build yours</span>
+            <a href="https://wa.me/201555663368" target="_blank" rel="noopener" class="footer-cta-icon" aria-label="Chat on WhatsApp">
+                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12.017 2C6.503 2 2.032 6.472 2.032 11.985c0 1.76.46 3.478 1.336 4.988L2 22l5.29-1.389c1.462.797 3.108 1.213 4.775 1.213h.004c5.514 0 9.985-4.472 9.985-9.985 0-2.666-1.037-5.17-2.923-7.056C17.245 3.033 14.74 2 12.017 2zm0 18.271h-.004c-1.487 0-2.944-.397-4.203-1.15l-.301-.179-3.135.823.837-3.058-.196-.313c-.83-1.319-1.269-2.845-1.269-4.409 0-4.564 3.712-8.276 8.275-8.276 2.211 0 4.286.86 5.85 2.427 1.564 1.564 2.425 3.639 2.421 5.849 0 4.564-3.712 8.276-8.275 8.276z"/></svg>
+            </a>
+        </div>
+        <nav>
+            <button class="nav-item active" onclick="switchScreen('home')">
+                <svg data-lucide="home"></svg>
+                Shop
+            </button>
+            <button class="nav-item" onclick="switchScreen('studio')">
+                <svg data-lucide="palette"></svg>
+                Custom
+            </button>
+            <button class="nav-item" onclick="switchScreen('gallery')">
+                <svg data-lucide="images"></svg>
+                Gallery
+            </button>
+            <button class="nav-item" onclick="switchScreen('bag')">
+                <svg data-lucide="shopping-bag"></svg>
+                Bag
+            </button>
+        </nav>
+    </div>
 
     <script>
         const appData = {
-            products: [
-                { id: 1, name: 'Dream Big', category: 'Positive Vibes', image: './images/products/dream-big.jpg', size: 'large', price: 150, quantity: 2, type: 'ready' },
-                { id: 2, name: 'Be Kind', category: 'Positive Vibes', image: './images/products/be-kind.jpg', size: 'small', price: 120, quantity: 4, type: 'ready' },
-                { id: 3, name: 'Smile', category: 'Positive Vibes', image: './images/products/smile.jpg', size: 'small', price: 120, quantity: 3, type: 'ready' },
-                { id: 4, name: 'Panda', category: 'Cute Friends', image: './images/products/panda.jpg', size: 'small', price: 120, quantity: 1, type: 'ready' },
-                { id: 5, name: 'Cat', category: 'Cute Friends', image: './images/products/cat.jpg', size: 'small', price: 120, quantity: 3, type: 'ready' },
-                { id: 6, name: 'Flower', category: 'Soft & Floral', image: './images/products/flower.jpg', size: 'small', price: 120, quantity: 2, type: 'ready' }
-            ],
+            products: [],
             cart: [],
             customDesigns: [],
             categories: ['All', 'Positive Vibes', 'Cute Friends', 'Soft & Floral'],
@@ -828,16 +879,54 @@
                 const loaded = JSON.parse(saved);
                 appData.cart = loaded.cart || [];
                 appData.customDesigns = loaded.customDesigns || [];
-                appData.products = loaded.products || appData.products;
             }
         }
 
         function saveData() {
             localStorage.setItem('handmadeShop', JSON.stringify({
                 cart: appData.cart,
-                customDesigns: appData.customDesigns,
-                products: appData.products
+                customDesigns: appData.customDesigns
             }));
+        }
+
+        // Firestore product sync (read-only: Admin owns all product writes)
+        const firebaseConfig = {
+            apiKey: "AIzaSyAYsuLm0rnvZW_1RUXWwykX_cwl6Ui6iks",
+            authDomain: "tiny-timber.firebaseapp.com",
+            projectId: "tiny-timber",
+            storageBucket: "tiny-timber.firebasestorage.app",
+            messagingSenderId: "920454844975",
+            appId: "1:920454844975:web:a3af099aa076ac2682acda"
+        };
+
+        const PRODUCTS_COLLECTION = 'products';
+        const ORDERS_COLLECTION = 'orders';
+
+        let firestoreDb = null;
+        let firestoreEnabled = false;
+
+        try {
+            firebase.initializeApp(firebaseConfig);
+            firestoreDb = firebase.firestore();
+            firestoreEnabled = true;
+        } catch (err) {
+            console.error('Firestore init failed:', err);
+            firestoreEnabled = false;
+        }
+
+        function initProductsSync() {
+            if (!firestoreEnabled) return;
+
+            firestoreDb.collection(PRODUCTS_COLLECTION).onSnapshot((snapshot) => {
+                const products = [];
+                snapshot.forEach(doc => {
+                    products.push({ ...doc.data(), firestoreId: doc.id });
+                });
+                appData.products = products;
+                renderProducts();
+            }, (error) => {
+                console.error('Firestore products listener error:', error);
+            });
         }
 
         // Init
@@ -865,6 +954,7 @@
             renderGallery();
             renderBag();
             renderStudio();
+            initProductsSync();
             if (window.lucide) { lucide.createIcons(); }
         });
 
@@ -1193,6 +1283,11 @@
                 </div>
 
                 <div class="form-group">
+                    <label class="form-label">Address</label>
+                    <input type="text" id="orderAddress" placeholder="Delivery address">
+                </div>
+
+                <div class="form-group">
                     <label class="form-label">How to receive?</label>
                     <div class="option-group">
                         <button class="option-btn selected" onclick="setDelivery(this, 'pickup')">Booth Pickup</button>
@@ -1219,9 +1314,10 @@
             deliveryType = type;
         }
 
-        function submitOrder() {
+        async function submitOrder() {
             const name = document.getElementById('orderName').value.trim();
             const phone = document.getElementById('orderPhone').value.trim();
+            const address = document.getElementById('orderAddress').value.trim();
 
             if (!name || !phone) {
                 alert('Please fill in your name and phone!');
@@ -1229,19 +1325,27 @@
             }
 
             const order = {
-                id: Date.now(),
-                name, phone, deliveryType,
+                name, phone, address, deliveryType,
                 notes: document.getElementById('orderNotes').value.trim(),
                 items: appData.cart,
                 total: appData.cart.reduce((s, i) => s + i.price, 0),
                 status: 'new',
-                date: new Date().toLocaleString()
+                date: new Date().toLocaleString(),
+                createdAt: firestoreEnabled ? firebase.firestore.FieldValue.serverTimestamp() : null
             };
 
-            // Save order
-            const orders = JSON.parse(localStorage.getItem('handmadeOrders') || '[]');
-            orders.push(order);
-            localStorage.setItem('handmadeOrders', JSON.stringify(orders));
+            if (firestoreEnabled) {
+                try {
+                    await firestoreDb.collection(ORDERS_COLLECTION).add(order);
+                } catch (err) {
+                    console.error('Firestore order submit failed:', err);
+                    alert('Could not send order. Please check your connection and try again.');
+                    return;
+                }
+            } else {
+                alert('Could not send order. Please check your connection and try again.');
+                return;
+            }
 
             appData.cart = [];
             saveData();

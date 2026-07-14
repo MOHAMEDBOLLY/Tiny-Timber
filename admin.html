@@ -9,8 +9,8 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="theme-color" content="#8B5A2B">
     <link rel="manifest" href="manifest.webmanifest">
-    <link rel="apple-touch-icon" href="images/icons/apple-touch-icon.png">
-    <title>Creator Dashboard - Little Handmade</title>
+    <link rel="apple-touch-icon" href="images/icons/apple-touch-icon-admin.png">
+    <title>Tiny Timber Admin</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -659,9 +659,136 @@
             height: 16px;
             flex-shrink: 0;
         }
+
+        /* ===== Admin Access Gate ===== */
+        #adminGate {
+            position: fixed;
+            inset: 0;
+            z-index: 10000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+            background: var(--bg);
+        }
+
+        html.admin-authed #adminGate {
+            display: none;
+        }
+
+        .gate-card {
+            width: 100%;
+            max-width: 340px;
+            text-align: center;
+            padding: 32px 28px;
+            border-radius: 24px;
+            background: rgba(255, 255, 255, 0.35);
+            border: 1px solid rgba(255, 255, 255, 0.45);
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.12);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+        }
+
+        :root[data-theme="dark"] .gate-card {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: rgba(255, 255, 255, 0.12);
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+        }
+
+        .gate-icon {
+            width: 64px;
+            height: 64px;
+            border-radius: 18px;
+            margin: 0 auto 16px;
+            display: block;
+            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
+        }
+
+        .gate-title {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--text);
+            margin-bottom: 6px;
+        }
+
+        .gate-subtitle {
+            font-size: 13px;
+            color: var(--text-light);
+            margin-bottom: 22px;
+        }
+
+        .gate-input {
+            width: 100%;
+            padding: 13px 16px;
+            font-size: 15px;
+            text-align: center;
+            letter-spacing: 2px;
+            color: var(--text);
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .gate-input:focus {
+            border-color: var(--primary);
+        }
+
+        .gate-error {
+            display: none;
+            font-size: 12.5px;
+            color: #d9534f;
+            margin-top: 10px;
+        }
+
+        .gate-error.show {
+            display: block;
+        }
+
+        .gate-btn {
+            width: 100%;
+            margin-top: 18px;
+            padding: 13px;
+            font-size: 15px;
+            font-weight: 600;
+            color: #fff;
+            background: var(--primary);
+            border: none;
+            border-radius: 14px;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+
+        .gate-btn:hover {
+            opacity: 0.9;
+        }
     </style>
 </head>
 <body>
+    <div id="adminGate">
+        <div class="gate-card">
+            <img class="gate-icon" src="images/icons/apple-touch-icon-admin.png" alt="Tiny Timber Admin">
+            <div class="gate-title">Tiny Timber Admin</div>
+            <div class="gate-subtitle">Enter your access code</div>
+            <input id="gateInput" class="gate-input" type="password" inputmode="numeric" autocomplete="off"
+                   placeholder="••••••" aria-label="Access code" autofocus
+                   onkeydown="if(event.key==='Enter'){submitAdminCode()}">
+            <div id="gateError" class="gate-error">Incorrect access code. Please try again.</div>
+            <button class="gate-btn" onclick="submitAdminCode()">Continue</button>
+        </div>
+    </div>
+    <script>
+        // Apply the saved theme and, if this tab is already authenticated, hide the
+        // gate before first paint so authenticated reloads show no access-screen flash.
+        (function () {
+            document.documentElement.setAttribute('data-theme', localStorage.getItem('theme') || 'light');
+            if (sessionStorage.getItem('tinyTimberAdminAuth') === 'granted') {
+                document.documentElement.classList.add('admin-authed');
+            }
+        })();
+    </script>
+
     <header>
         <div class="brand-section">
             <svg class="brand-logo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -983,6 +1110,26 @@
     </nav>
 
     <script>
+        // ===== Admin Access Gate =====
+        // To change the admin access code, edit this one value.
+        const ADMIN_ACCESS_CODE = "010203";
+
+        function submitAdminCode() {
+            const input = document.getElementById('gateInput');
+            const error = document.getElementById('gateError');
+            if (input.value === ADMIN_ACCESS_CODE) {
+                // Authentication is kept in sessionStorage only, so it expires
+                // automatically when the browser tab is closed.
+                sessionStorage.setItem('tinyTimberAdminAuth', 'granted');
+                document.documentElement.classList.add('admin-authed');
+                error.classList.remove('show');
+            } else {
+                error.classList.add('show');
+                input.value = '';
+                input.focus();
+            }
+        }
+
         const appData = {
             products: [
                 { id: 1, name: 'Dream Big', category: 'Positive Vibes', image: 'images/products/dream-big.jpg', size: 'large', price: 150, cost: 50, quantity: 2, type: 'ready' },
@@ -1020,10 +1167,6 @@
                 const data = JSON.parse(shop);
                 appData.products = data.products || appData.products;
             }
-            const orders = localStorage.getItem('handmadeOrders');
-            if (orders) {
-                appData.orders = JSON.parse(orders);
-            }
             const boothSales = localStorage.getItem('handmadeBoothSales');
             if (boothSales) {
                 appData.boothSales = JSON.parse(boothSales);
@@ -1042,7 +1185,6 @@
                 customDesigns: [],
                 cart: []
             }));
-            localStorage.setItem('handmadeOrders', JSON.stringify(appData.orders));
             localStorage.setItem('handmadeBoothSales', JSON.stringify(appData.boothSales));
         }
 
@@ -1058,10 +1200,12 @@
 
         const PRODUCTS_COLLECTION = 'products';
         const PRODUCTS_MIGRATION_FLAG = 'tinyTimberProductsMigrated';
+        const ORDERS_COLLECTION = 'orders';
 
         let firestoreDb = null;
         let firestoreEnabled = false;
         let productsUnsubscribe = null;
+        let ordersUnsubscribe = null;
 
         try {
             firebase.initializeApp(firebaseConfig);
@@ -1119,6 +1263,38 @@
                 loadData();
                 renderProductViews();
             });
+        }
+
+        function initOrdersSync() {
+            if (!firestoreEnabled) {
+                return;
+            }
+
+            ordersUnsubscribe = firestoreDb.collection(ORDERS_COLLECTION).orderBy('createdAt', 'desc').onSnapshot((snapshot) => {
+                const orders = [];
+                snapshot.forEach(doc => {
+                    orders.push({ ...doc.data(), firestoreId: doc.id });
+                });
+                appData.orders = orders;
+                updateHome();
+                renderOrders();
+            }, (error) => {
+                console.error('Firestore orders listener error:', error);
+            });
+        }
+
+        async function updateOrderStatus(idx, status) {
+            const order = appData.orders[idx];
+            if (order && order.firestoreId) {
+                try {
+                    await firestoreDb.collection(ORDERS_COLLECTION).doc(order.firestoreId).update({ status });
+                    return; // onSnapshot will update appData.orders and re-render
+                } catch (err) {
+                    console.error('Firestore update order status failed:', err);
+                }
+            }
+            order.status = status;
+            renderOrders();
         }
 
         async function createProduct(product) {
@@ -1215,6 +1391,7 @@
             renderMaterials();
             updateLastBackupDisplay();
             initProductsSync();
+            initOrdersSync();
             if (window.lucide) { lucide.createIcons(); }
         });
 
@@ -1306,7 +1483,9 @@
                 <div class="card">
                     <div class="card-title">${o.name}</div>
                     <div class="card-detail">${o.phone}</div>
+                    ${o.address ? `<div class="card-detail">${o.address}</div>` : ''}
                     <div class="card-detail">${o.total} EGP - ${o.deliveryType === 'delivery' ? 'Delivery' : 'Pickup'}</div>
+                    <div class="card-detail">${o.date || ''}</div>
                     ${o.items && o.items.length > 0 ? `
                         <div class="card-detail" style="margin-top: 8px; border-top: 1px solid var(--border); padding-top: 8px;">
                             ${o.items.map(item => `<div>${item.text || item.name} (${item.sizeName})</div>`).join('')}
@@ -1320,12 +1499,6 @@
                     </div>
                 </div>
             `).join('');
-        }
-
-        function updateOrderStatus(idx, status) {
-            appData.orders[idx].status = status;
-            saveData();
-            renderOrders();
         }
 
         function toggleAddDesign() {

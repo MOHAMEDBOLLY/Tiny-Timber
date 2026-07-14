@@ -1,0 +1,31 @@
+rules_version = '2';
+
+// Tiny Timber MVP Firestore Security Rules
+//
+// Prior state (undocumented in this repo — rules were never managed via
+// firebase.json/CLI here, only in the Firebase Console): confirmed by runtime
+// testing on 2026-07-14 that the `products` collection allowed open read/write
+// (Admin CRUD and Shop's realtime listener both worked with zero permission
+// errors), while `orders` had no matching rule and every read/write returned
+// FirebaseError permission-denied. No other collections are read from or
+// written to by this app.
+//
+// This ruleset makes that explicit and adds the missing `orders` collection.
+// MVP scope only: no auth exists yet, so both collections are fully open.
+// Do not broaden beyond these two collections without deliberate review.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    match /products/{productId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    match /orders/{orderId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    // Everything else stays denied (default-deny).
+  }
+}
