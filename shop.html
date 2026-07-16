@@ -913,6 +913,7 @@
         const PRODUCTS_COLLECTION = 'products';
         const ORDERS_COLLECTION = 'orders';
         const GALLERY_COLLECTION = 'gallery';
+        const QR_SCANS_COLLECTION = 'qrScans';
 
         let firestoreDb = null;
         let firestoreEnabled = false;
@@ -956,6 +957,29 @@
             });
         }
 
+        // QR Analytics: logs one scan per session when the site is opened via the
+        // printed/shared Website QR code. Stores only a timestamp/date/time — no
+        // IP, browser, device, location, cookies, or other identifying data.
+        function logQrScanIfPresent() {
+            if (!firestoreEnabled) return;
+            if (new URLSearchParams(window.location.search).get('ref') !== 'qr') return;
+
+            try {
+                if (sessionStorage.getItem('tinyTimberQrScanLogged') === 'true') return;
+            } catch (e) { /* ignore storage errors */ }
+
+            const now = new Date();
+            firestoreDb.collection(QR_SCANS_COLLECTION).add({
+                timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                date: now.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
+                time: now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
+            }).then(() => {
+                try { sessionStorage.setItem('tinyTimberQrScanLogged', 'true'); } catch (e) { /* ignore storage errors */ }
+            }).catch((err) => {
+                console.error('Firestore QR scan log failed:', err);
+            });
+        }
+
         // Init
         // Theme Management
         function initTheme() {
@@ -983,6 +1007,7 @@
             renderStudio();
             initProductsSync();
             initGallerySync();
+            logQrScanIfPresent();
             let savedScreen = null;
             try { savedScreen = sessionStorage.getItem('tinyTimberCurrentScreen'); } catch (e) { /* ignore storage errors */ }
             switchScreen(['home', 'studio', 'gallery', 'bag', 'history'].includes(savedScreen) ? savedScreen : 'home');

@@ -14,8 +14,10 @@ rules_version = '2';
 // `gallery` was added 2026-07-14 with the same MVP policy, approved explicitly
 // by the project owner after its listener was confirmed to be permission-denied.
 // `materials` was added 2026-07-14 for the new Materials CRUD module, same policy.
-// MVP scope only: no auth exists yet, so all four collections are fully open.
-// Do not broaden beyond these four collections without deliberate review.
+// `qrScans` was added 2026-07-14 for QR code scan analytics; documents contain
+// only a timestamp/date/time, no personal or device data.
+// MVP scope only: no auth exists yet, so all five collections are fully open.
+// Do not broaden beyond these five collections without deliberate review.
 service cloud.firestore {
   match /databases/{database}/documents {
 
@@ -35,6 +37,11 @@ service cloud.firestore {
     }
 
     match /materials/{materialId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    match /qrScans/{scanId} {
       allow read: if true;
       allow write: if true;
     }

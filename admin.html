@@ -17,6 +17,7 @@
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="pwa.js" defer></script>
     <style>
         * {
@@ -836,6 +837,21 @@
                         <div class="stat-label">Pending Orders</div>
                     </div>
                 </div>
+
+                <div class="card">
+                    <div class="card-title">QR Visitors</div>
+                    <div style="display: flex; gap: 24px; margin-top: 8px;">
+                        <div>
+                            <div style="font-size: 20px; font-weight: 700; color: var(--primary);" id="qrScansToday">0</div>
+                            <div class="card-detail">Today</div>
+                        </div>
+                        <div>
+                            <div style="font-size: 20px; font-weight: 700; color: var(--primary);" id="qrScansTotal">0</div>
+                            <div class="card-detail">Total</div>
+                        </div>
+                    </div>
+                    <button class="btn-sm-secondary" style="width: 100%; margin-top: 12px;" onclick="openQrHistoryModal()">View History</button>
+                </div>
             </div>
         </div>
 
@@ -1125,7 +1141,24 @@
                     <div class="card-detail">Erases all products, orders, sales, materials and gallery photos, and restores the original demo data.</div>
                     <button class="btn-sm-secondary" style="width: 100%; margin-top: 12px; padding: 12px; color: var(--primary);" onclick="resetDemoData()">Reset Demo Data</button>
                 </div>
+
+                <div class="card">
+                    <div class="card-title">Website QR</div>
+                    <div id="websiteQrImage" style="display: flex; justify-content: center; margin: 12px 0;"></div>
+                    <div class="card-detail" style="text-align: center; word-break: break-all;">https://tiny-timber.web.app</div>
+                    <button class="btn" style="width: 100%; margin-top: 12px;" onclick="downloadWebsiteQr()">Download QR</button>
+                    <button class="btn-sm-secondary" style="width: 100%; margin-top: 10px; padding: 12px;" onclick="copyWebsiteQrLink()">Copy Link</button>
+                </div>
             </div>
+        </div>
+    </div>
+
+    <!-- QR Scan History (small modal, no new page) -->
+    <div id="qrHistoryModal" style="display: none; position: fixed; inset: 0; z-index: 500; align-items: center; justify-content: center; background: rgba(0,0,0,0.4);">
+        <div class="card" style="width: 90%; max-width: 360px; max-height: 70vh; overflow-y: auto;">
+            <div class="card-title">QR Scan History</div>
+            <div id="qrHistoryList" style="margin-top: 8px;"></div>
+            <button class="btn-sm-secondary" style="width: 100%; margin-top: 12px;" onclick="closeQrHistoryModal()">Close</button>
         </div>
     </div>
 
@@ -1202,6 +1235,7 @@
             gallery: [],
             boothSales: [],
             materials: [],
+            qrScans: [],
             costs: {
                 woodSmall: 5,
                 woodLarge: 8,
@@ -1251,6 +1285,7 @@
         const ORDERS_COLLECTION = 'orders';
         const GALLERY_COLLECTION = 'gallery';
         const MATERIALS_COLLECTION = 'materials';
+        const QR_SCANS_COLLECTION = 'qrScans';
 
         let firestoreDb = null;
         let firestoreEnabled = false;
@@ -1258,6 +1293,7 @@
         let ordersUnsubscribe = null;
         let galleryUnsubscribe = null;
         let materialsUnsubscribe = null;
+        let qrScansUnsubscribe = null;
 
         try {
             firebase.initializeApp(firebaseConfig);
@@ -1414,6 +1450,75 @@
             }
         }
 
+        // QR Analytics
+        function initQrScansSync() {
+            if (!firestoreEnabled) return;
+
+            qrScansUnsubscribe = firestoreDb.collection(QR_SCANS_COLLECTION).onSnapshot((snapshot) => {
+                const scans = [];
+                snapshot.forEach(doc => scans.push({ ...doc.data(), firestoreId: doc.id }));
+                appData.qrScans = scans;
+                updateQrVisitorsCard();
+            }, (error) => {
+                console.error('Firestore QR scans listener error:', error);
+            });
+        }
+
+        function updateQrVisitorsCard() {
+            const today = new Date().toDateString();
+            const todayCount = appData.qrScans.filter(s => s.timestamp && new Date(s.timestamp.seconds * 1000).toDateString() === today).length;
+            document.getElementById('qrScansToday').textContent = todayCount;
+            document.getElementById('qrScansTotal').textContent = appData.qrScans.length;
+        }
+
+        function openQrHistoryModal() {
+            const list = document.getElementById('qrHistoryList');
+            const scans = appData.qrScans.slice().sort((a, b) => (b.timestamp?.seconds || 0) - (a.timestamp?.seconds || 0));
+
+            if (scans.length === 0) {
+                list.innerHTML = '<div class="card-detail">No scans yet</div>';
+            } else {
+                list.innerHTML = scans.map(s => `
+                    <div class="card-detail" style="margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--border);">
+                        <div>${s.date}</div>
+                        <div>${s.time}</div>
+                    </div>
+                `).join('');
+            }
+
+            document.getElementById('qrHistoryModal').style.display = 'flex';
+        }
+
+        function closeQrHistoryModal() {
+            document.getElementById('qrHistoryModal').style.display = 'none';
+        }
+
+        const WEBSITE_QR_URL = 'https://tiny-timber.web.app/?ref=qr';
+
+        function renderWebsiteQr() {
+            const container = document.getElementById('websiteQrImage');
+            if (!container || typeof QRCode === 'undefined') return;
+            container.innerHTML = '';
+            new QRCode(container, { text: WEBSITE_QR_URL, width: 180, height: 180 });
+        }
+
+        function downloadWebsiteQr() {
+            const canvas = document.querySelector('#websiteQrImage canvas');
+            if (!canvas) return;
+            const link = document.createElement('a');
+            link.download = 'tiny-timber-qr.png';
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+        }
+
+        function copyWebsiteQrLink() {
+            navigator.clipboard.writeText('https://tiny-timber.web.app').then(() => {
+                alert('Link copied!');
+            }).catch(() => {
+                alert('Could not copy link.');
+            });
+        }
+
         async function createProduct(product) {
             if (firestoreEnabled) {
                 try {
@@ -1511,6 +1616,8 @@
             initOrdersSync();
             initGallerySync();
             initMaterialsSync();
+            initQrScansSync();
+            renderWebsiteQr();
             if (window.lucide) { lucide.createIcons(); }
         });
 
