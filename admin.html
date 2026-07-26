@@ -18,6 +18,7 @@
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/photoswipe@5.4.4/dist/photoswipe.css">
     <script src="pwa.js" defer></script>
     <style>
         * {
@@ -1162,6 +1163,7 @@
         </div>
     </div>
 
+
     <nav>
         <button class="nav-item active" onclick="switchTab('home')">
             <svg data-lucide="layout-dashboard"></svg>
@@ -1973,7 +1975,7 @@
             const list = document.getElementById('designsList');
             list.innerHTML = appData.products.map((p, i) => `
                 <div class="card">
-                    <div class="design-image">
+                    <div class="design-image" ${p.image ? `onclick="openImageViewer(${p.id})" style="cursor: zoom-in;"` : ''}>
                         ${p.thumbnail || p.image ? `<img src="${p.thumbnail || p.image}" alt="${p.name}" loading="lazy">` : `<svg class="design-image-fallback" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><path d="M12 2c0 0 -3 2 -3 5c0 2 1 3 3 5c2 -2 3 -3 3 -5c0 -3 -3 -5 -3 -5"></path></svg>`}
                     </div>
                     <div class="card-title">${p.name}</div>
@@ -2492,6 +2494,150 @@
             alert('Demo data reset! Refreshing dashboard...');
             window.location.reload();
         }
+    </script>
+
+    <!-- Admin-only High Resolution Image Viewer (PhotoSwipe v5). Not present on the
+         customer site. Loads the original, untransformed Cloudinary URL — no new
+         transformed derivative is created, and PhotoSwipe only fetches it once the
+         viewer is actually opened. -->
+    <script type="module">
+        import PhotoSwipe from 'https://cdn.jsdelivr.net/npm/photoswipe@5.4.4/dist/photoswipe.esm.js';
+
+        function buildImageDataSource() {
+            return appData.products
+                .filter(p => p.image)
+                .map(p => ({ src: p.image, alt: p.name, productId: p.id }));
+        }
+
+        // PhotoSwipe needs each item's width/height to load and lay out its slide.
+        // We don't store dimensions in Firestore (out of scope), so resolve them here —
+        // this only runs once the viewer is actually opened, keeping it lazy.
+        function resolveImageDimensions(item) {
+            if (item.width && item.height) return Promise.resolve(item);
+            return new Promise((resolve) => {
+                const img = new Image();
+                img.onload = () => {
+                    item.width = img.naturalWidth;
+                    item.height = img.naturalHeight;
+                    resolve(item);
+                };
+                img.onerror = () => resolve(item);
+                img.src = item.src;
+            });
+        }
+
+        function viewportCenter(pswp) {
+            return { x: pswp.viewportSize.x / 2, y: pswp.viewportSize.y / 2 };
+        }
+
+        window.openImageViewer = async function (productId) {
+            const dataSource = buildImageDataSource();
+            const index = dataSource.findIndex(item => item.productId === productId);
+            if (index === -1) return;
+
+            // Only block opening on the clicked image's dimensions (one request).
+            // The rest resolve in the background as the admin navigates prev/next.
+            await resolveImageDimensions(dataSource[index]);
+            dataSource.forEach((item, i) => { if (i !== index) resolveImageDimensions(item); });
+
+            const pswp = new PhotoSwipe({
+                dataSource,
+                index,
+                bgOpacity: 0.92,
+                showHideAnimationType: 'fade',
+                showAnimationDuration: 250,
+                hideAnimationDuration: 250,
+                wheelToZoom: true
+            });
+
+            pswp.on('uiRegister', () => {
+                // Small, unobtrusive info overlay: original resolution, current zoom %,
+                // and current image index. Admin viewer only — nothing customer-facing.
+                pswp.ui.registerElement({
+                    name: 'info-overlay',
+                    className: 'pswp__info-overlay',
+                    appendTo: 'wrapper',
+                    html: '',
+                    onInit: (el) => {
+                        el.style.cssText = 'position:absolute; left:12px; bottom:12px; z-index:100000; ' +
+                            'background:rgba(0,0,0,0.55); color:#fff; font-size:11px; line-height:1.6; ' +
+                            'padding:6px 10px; border-radius:8px; pointer-events:none; white-space:nowrap;';
+                        const update = () => {
+                            if (!pswp.currSlide) return;
+                            const { width, height } = pswp.currSlide.data;
+                            const zoomPct = Math.round(pswp.currSlide.currZoomLevel * 100);
+                            const resText = width && height ? `${width} × ${height}` : 'Resolution unknown';
+                            el.innerHTML = `${resText}<br>Zoom: ${zoomPct}%<br>${pswp.currIndex + 1} / ${dataSource.length}`;
+                        };
+                        pswp.on('zoomPanUpdate', update);
+                        pswp.on('afterInit', update);
+                        pswp.on('change', update);
+                    }
+                });
+
+                pswp.ui.registerElement({
+                    name: 'zoom-in-button',
+                    ariaLabel: 'Zoom in',
+                    title: 'Zoom in',
+                    order: 6,
+                    isButton: true,
+                    html: '+',
+                    onClick: () => {
+                        pswp.zoomTo(Math.min(pswp.currSlide.zoomLevels.max, pswp.currSlide.currZoomLevel * 1.5), viewportCenter(pswp), 200);
+                    }
+                });
+
+                pswp.ui.registerElement({
+                    name: 'zoom-out-button',
+                    ariaLabel: 'Zoom out',
+                    title: 'Zoom out',
+                    order: 7,
+                    isButton: true,
+                    html: '&minus;',
+                    onClick: () => {
+                        pswp.zoomTo(Math.max(pswp.currSlide.zoomLevels.min, pswp.currSlide.currZoomLevel / 1.5), viewportCenter(pswp), 200);
+                    }
+                });
+
+                pswp.ui.registerElement({
+                    name: 'reset-zoom-button',
+                    ariaLabel: 'Reset to 100%',
+                    title: 'Reset (100%)',
+                    order: 8,
+                    isButton: true,
+                    html: '<span style="font-size:11px;">Reset</span>',
+                    onClick: () => {
+                        pswp.zoomTo(1, viewportCenter(pswp), 200);
+                    }
+                });
+
+                pswp.ui.registerElement({
+                    name: 'fit-screen-button',
+                    ariaLabel: 'Fit to screen',
+                    title: 'Fit to Screen',
+                    order: 9,
+                    isButton: true,
+                    html: '<span style="font-size:11px;">Fit</span>',
+                    onClick: () => {
+                        pswp.zoomTo(pswp.currSlide.zoomLevels.initial, viewportCenter(pswp), 200);
+                    }
+                });
+
+                pswp.ui.registerElement({
+                    name: 'actual-size-button',
+                    ariaLabel: 'Actual size (1:1 pixels)',
+                    title: 'Actual Size',
+                    order: 10,
+                    isButton: true,
+                    html: '<span style="font-size:11px;">1:1</span>',
+                    onClick: () => {
+                        pswp.zoomTo(1, viewportCenter(pswp), 200);
+                    }
+                });
+            });
+
+            pswp.init();
+        };
     </script>
 </body>
 </html>
