@@ -1056,9 +1056,15 @@
         // multi-megabyte images to render at ~100-400px, which is slow to load and can look
         // soft/blurry mid-load. This applies responsive delivery without touching the stored
         // URL or changing crop behavior (c_limit only caps size, it never crops).
+        // dpr_2.0 is used instead of dpr_auto: dpr_auto only takes effect when the browser
+        // sends a DPR Client Hint header, which iOS Safari never sends and Chrome only sends
+        // with an explicit Accept-CH opt-in this site doesn't have — so dpr_auto silently
+        // fell back to 1x on essentially every real mobile device, while looking fine on
+        // desktop (DPR ~1 there anyway). dpr_2.0 always requests 2x pixel density regardless
+        // of headers, fixing Retina/high-DPR mobile screens without depending on Client Hints.
         function getCloudinaryDisplayUrl(url) {
             if (!url || !url.includes('res.cloudinary.com')) return url;
-            return url.replace('/upload/', '/upload/f_auto,q_auto:good,dpr_auto,c_limit,w_1200/');
+            return url.replace('/upload/', '/upload/f_auto,q_auto:good,dpr_2.0,c_limit,w_1200/');
         }
 
         function renderProducts() {
